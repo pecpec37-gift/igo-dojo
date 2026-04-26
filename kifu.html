@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>棋譜一覧 — 囲碁棋譜道場</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --gold: #c8a84b; --gold-light: #e8c964; --gold-dim: #92703a;
+    --bg-base: #080808; --bg-card: rgba(255,255,255,0.035); --bg-card2: rgba(255,255,255,0.06);
+    --border: rgba(200,168,75,0.18); --border2: rgba(200,168,75,0.35);
+    --text: #e8d5a3; --text-muted: #9ca3af; --text-dim: #6b7280;
+  }
+  body {
+    background-color: var(--bg-base);
+    background-image:
+      radial-gradient(ellipse 80% 40% at 50% -5%, rgba(200,168,75,0.06) 0%, transparent 70%),
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(200,168,75,0.02) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(200,168,75,0.02) 40px);
+    color: var(--text);
+    font-family: 'Noto Serif JP', Georgia, serif;
+    min-height: 100vh;
+  }
+  header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 clamp(1.2rem, 5vw, 3rem); height: 56px;
+    background: rgba(8,8,8,0.9); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .logo { font-size: 15px; font-weight: 700; color: var(--gold-light); letter-spacing: 3px; text-decoration: none; }
+  nav { display: flex; gap: 8px; }
+  nav a {
+    color: var(--text-muted); font-size: 12px; text-decoration: none;
+    padding: 6px 14px; border-radius: 6px; border: 1px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  nav a:hover, nav a.active { color: var(--gold-light); border-color: var(--border); }
+
+  main { padding: 80px clamp(1.2rem, 6vw, 4rem) 60px; max-width: 1100px; margin: 0 auto; }
+
+  .page-header { text-align: center; padding: 40px 0 36px; }
+  .page-label { font-size: 11px; letter-spacing: 5px; color: var(--gold-dim); margin-bottom: 10px; }
+  .page-title { font-size: clamp(22px, 5vw, 36px); font-weight: 700; color: var(--gold-light); letter-spacing: 4px; margin-bottom: 10px; }
+  .page-desc { font-size: 13px; color: var(--text-muted); }
+
+  /* フィルター */
+  .filter-bar {
+    display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+    margin-bottom: 32px;
+  }
+  .filter-btn {
+    background: var(--bg-card); border: 1px solid var(--border);
+    color: var(--text-muted); font-family: inherit; font-size: 12px;
+    letter-spacing: 1px; padding: 7px 18px; border-radius: 100px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .filter-btn:hover { border-color: var(--border2); color: var(--text); }
+  .filter-btn.active {
+    background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+    border-color: transparent; color: #0a0a0f; font-weight: 700;
+  }
+
+  /* 棋譜グリッド */
+  .kifu-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+  .kifu-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, transform 0.2s;
+    text-decoration: none; color: inherit;
+    display: block;
+  }
+  .kifu-card:hover {
+    background: var(--bg-card2);
+    border-color: var(--border2);
+    transform: translateY(-2px);
+  }
+  .kifu-card-top {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 12px;
+  }
+  .kifu-title { font-size: 13px; font-weight: 700; color: var(--gold-light); line-height: 1.5; flex: 1; }
+  .level-badge {
+    font-size: 10px; font-weight: 700; letter-spacing: 1px;
+    padding: 3px 10px; border-radius: 100px; white-space: nowrap; margin-left: 10px;
+  }
+  .lv-入門 { background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.4); color: #93c5fd; }
+  .lv-初級 { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.4); color: #6ee7b7; }
+  .lv-中級 { background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.4); color: #fcd34d; }
+  .lv-上級 { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; }
+
+  .kifu-players {
+    display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;
+  }
+  .badge-black {
+    background: #111; color: #eee; padding: 2px 10px;
+    border-radius: 10px; font-size: 11px; font-weight: 700; border: 1px solid #444;
+  }
+  .badge-white {
+    background: #e8e8e8; color: #111; padding: 2px 10px;
+    border-radius: 10px; font-size: 11px; font-weight: 700; border: 1px solid #aaa;
+  }
+  .vs-text { font-size: 10px; color: var(--text-dim); }
+  .kifu-meta { font-size: 11px; color: var(--text-dim); display: flex; gap: 14px; flex-wrap: wrap; }
+
+  /* 空状態 */
+  .empty { text-align: center; padding: 60px 0; color: var(--text-dim); font-size: 14px; }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 24px clamp(1.2rem, 5vw, 3rem);
+    text-align: center; color: var(--text-dim); font-size: 12px; letter-spacing: 1px;
+  }
+  footer span { color: var(--gold-dim); }
+
+  @media (max-width: 480px) {
+    .kifu-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="index.html">⚫ 囲碁棋譜道場</a>
+  <nav>
+    <a href="game.html">ゲーム</a>
+    <a href="kifu.html" class="active">棋譜一覧</a>
+  </nav>
+</header>
+
+<main>
+  <div class="page-header">
+    <p class="page-label">KIFU LIST</p>
+    <h1 class="page-title">棋譜一覧</h1>
+    <p class="page-desc">収録40局　— 棋譜を選択してゲームをプレイ</p>
+  </div>
+
+  <div class="filter-bar" id="filter-bar">
+    <button class="filter-btn active" data-level="全て" onclick="setFilter('全て', this)">全て</button>
+    <button class="filter-btn" data-level="入門" onclick="setFilter('入門', this)">入門</button>
+    <button class="filter-btn" data-level="初級" onclick="setFilter('初級', this)">初級</button>
+    <button class="filter-btn" data-level="中級" onclick="setFilter('中級', this)">中級</button>
+    <button class="filter-btn" data-level="上級" onclick="setFilter('上級', this)">上級</button>
+  </div>
+
+  <div class="kifu-grid" id="kifu-grid"></div>
+</main>
+
+<footer>
+  <p>⚫⚪ &nbsp; <span>囲碁棋譜道場</span> &nbsp; — &nbsp; 棋力向上トレーニングサイト</p>
+</footer>
+
+<script>
+// ── 棋譜データ（フェーズ2でSGFデータに差し替えてください） ──
+const KIFU_DATA = [
+  { id:"game01", title:"第01局 Master vs NN",           black:"NN",             white:"Master(Magist)", date:"2016-12-29", level:"入門",  moves:50 },
+  { id:"game02", title:"第02局 Master vs NN",           black:"NN",             white:"Master(Magist)", date:"2016-12-29", level:"入門",  moves:50 },
+  { id:"game03", title:"第03局 Master vs NN",           black:"Master(Magist)", white:"NN",             date:"2016-12-29", level:"入門",  moves:50 },
+  { id:"game04", title:"第04局 Master vs Xie Erhao",    black:"Xie Erhao",      white:"Master(Magist)", date:"2016-12-29", level:"初級",  moves:50 },
+  { id:"game05", title:"第05局 Master vs Yu Zhiying",   black:"Master(Magist)", white:"Yu Zhiying",     date:"2016-12-29", level:"初級",  moves:50 },
+  { id:"game06", title:"第06局 Master vs Li Xiangyu",   black:"Master(Magist)", white:"Li Xiangyu",     date:"2016-12-29", level:"初級",  moves:50 },
+  { id:"game07", title:"第07局 Master vs NN",           black:"Master(Magist)", white:"NN",             date:"2016-12-29", level:"初級",  moves:50 },
+  { id:"game08", title:"第08局 Master vs Han Yizou",    black:"Han Yizou",      white:"Master(Magist)", date:"2016-12-29", level:"中級",  moves:50 },
+  { id:"game09", title:"第09局 Master vs Meng Tailing", black:"Master(Magist)", white:"Meng Tailing",   date:"2016-12-29", level:"中級",  moves:50 },
+  { id:"game10", title:"第10局 Master vs Meng Tailing", black:"Meng Tailing",   white:"Master(Magist)", date:"2016-12-30", level:"中級",  moves:50 },
+  { id:"game11", title:"第11局 Master vs NN",           black:"NN",             white:"Master",         date:"2016-12-30", level:"上級",  moves:50 },
+  { id:"game12", title:"第12局 Master vs NN",           black:"NN",             white:"Master",         date:"2016-12-30", level:"上級",  moves:50 },
+  { id:"game13", title:"第13局 Master vs atomy",        black:"atomy",          white:"Master",         date:"2016-12-30", level:"上級",  moves:50 },
+  { id:"game14", title:"第14局 Master vs NN",           black:"Master",         white:"NN",             date:"2016-12-30", level:"上級",  moves:50 },
+  { id:"game15", title:"第15局 Master vs Park Jung-hwan",black:"Park Jung-hwan",white:"Magister",       date:"2016-12-30", level:"上級",  moves:50 },
+  { id:"game16", title:"第16局 Master vs Lian Xiao",    black:"Lian Xiao",      white:"Master",         date:"2016-12-30", level:"上級",  moves:50 },
+  { id:"game17", title:"第17局 Master vs Lian Xiao",    black:"Lian Xiao",      white:"Master",         date:"2016-12-30", level:"上級",  moves:50 },
+  { id:"game18", title:"第18局 Master vs Ke Jie",       black:"Master",         white:"Ke Jie",         date:"2016-12-30", level:"上級",  moves:50 },
+  { id:"game19", title:"第19局 Master vs Ke Jie",       black:"Ke Jie",         white:"Master",         date:"2016-12-30", level:"上級",  moves:50 },
+  { id:"game20", title:"第20局 Master vs Park Jung-hwan",black:"Master",        white:"Park Jung-hwan", date:"2016-12-30", level:"上級",  moves:50 },
+  { id:"game21", title:"三連星 松本武久 vs 柳時熏",      black:"松本武久",  white:"柳時熏",    date:"2014-10-09", level:"中級",  moves:50 },
+  { id:"game22", title:"三連星 大橋拓文 vs 依田紀基",    black:"大橋拓文",  white:"依田紀基",  date:"2017-06-22", level:"中級",  moves:50 },
+  { id:"game23", title:"三連星 大淵盛人 vs 柳時熏",      black:"大淵盛人",  white:"柳時熏",    date:"2013-12-05", level:"中級",  moves:50 },
+  { id:"game24", title:"三連星 武宮正樹 vs 山田規三生",  black:"武宮正樹",  white:"山田規三生",date:"2013-08-29", level:"上級",  moves:50 },
+  { id:"game25", title:"三連星 山城宏 vs 小林光一",      black:"山城宏",    white:"小林光一",  date:"2014-05-08", level:"上級",  moves:50 },
+  { id:"game21b", title:"三連星 本木克弥 vs 柳時熏",     black:"本木克弥",  white:"柳時熏",    date:"2013-11-21", level:"中級",  moves:50 },
+  { id:"game26", title:"二連星 吉原由香里 vs 小林覚",    black:"吉原由香里",white:"小林覚",    date:"2026-03-05", level:"入門",  moves:50 },
+  { id:"game27", title:"二連星 金恩持 vs 李昌鎬",        black:"金恩持",    white:"李昌鎬",    date:"2026-02-09", level:"入門",  moves:50 },
+  { id:"game28", title:"二連星 芝野虎丸 vs 一力遼",      black:"芝野虎丸",  white:"一力遼",    date:"2025-10-15", level:"初級",  moves:50 },
+  { id:"game29", title:"二連星 西村仁 vs 関山利道",      black:"西村仁",    white:"関山利道",  date:"2025-09-11", level:"初級",  moves:50 },
+  { id:"game30", title:"二連星 大淵浩太郎 vs 大西竜平",  black:"大淵浩太郎",white:"大西竜平",  date:"2025-07-14", level:"初級",  moves:50 },
+  { id:"game31", title:"二連星 仲邑菫 vs 呉政娥",        black:"仲邑菫",    white:"呉政娥",    date:"2025-06-25", level:"中級",  moves:50 },
+  { id:"game32", title:"二連星 仲邑菫 vs 高根台",        black:"仲邑菫",    white:"高根台",    date:"2024-12-22", level:"中級",  moves:50 },
+  { id:"game33", title:"二連星 富士田明彦 vs 黄翊祖",    black:"富士田明彦",white:"黄翊祖",    date:"2025-08-21", level:"中級",  moves:50 },
+  { id:"game34", title:"二連星 朴廷桓 vs 姜東潤",        black:"朴廷桓",    white:"姜東潤",    date:"2026-04-03", level:"上級",  moves:50 },
+  { id:"game35", title:"二連星 柳時熏 vs 小林覚",        black:"柳時熏",    white:"小林覚",    date:"2026-01-26", level:"上級",  moves:50 },
+  { id:"game36", title:"二連星 余正麒 vs 一力遼",        black:"余正麒",    white:"一力遼",    date:"2025-09-17", level:"上級",  moves:50 },
+  { id:"game37", title:"二連星 林怡廷 vs 岩田紗絵加",    black:"林怡廷",    white:"岩田紗絵加",date:"2026-02-10", level:"上級",  moves:50 },
+  { id:"game38", title:"二連星 柯潔 vs 韓相朝",          black:"柯潔",      white:"韓相朝",    date:"2024-09-30", level:"上級",  moves:50 },
+];
+
+let currentFilter = '全て';
+
+function setFilter(level, btn) {
+  currentFilter = level;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGrid();
+}
+
+function renderGrid() {
+  const grid = document.getElementById('kifu-grid');
+  const list = currentFilter === '全て' ? KIFU_DATA : KIFU_DATA.filter(k => k.level === currentFilter);
+  if (list.length === 0) {
+    grid.innerHTML = '<div class="empty">該当する棋譜がありません</div>';
+    return;
+  }
+  grid.innerHTML = list.map(k => `
+    <a class="kifu-card" href="game.html?id=${k.id}">
+      <div class="kifu-card-top">
+        <div class="kifu-title">${k.title}</div>
+        <span class="level-badge lv-${k.level}">${k.level}</span>
+      </div>
+      <div class="kifu-players">
+        <span class="badge-black">⚫ ${k.black}</span>
+        <span class="vs-text">vs</span>
+        <span class="badge-white">⚪ ${k.white}</span>
+      </div>
+      <div class="kifu-meta">
+        <span>📅 ${k.date}</span>
+        <span>📋 ${k.moves}手収録</span>
+      </div>
+    </a>
+  `).join('');
+}
+
+renderGrid();
+</script>
+</body>
+</html>

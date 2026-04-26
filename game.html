@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>棋譜記憶力ゲーム — 囲碁棋譜道場</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  .site-header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 clamp(1.2rem, 5vw, 2rem); height: 50px;
+    background: rgba(8,8,8,0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(200,168,75,0.18);
+  }
+  .site-logo { font-size: 13px; font-weight: 700; color: #e8c964; letter-spacing: 3px; text-decoration: none; font-family: 'Noto Serif JP', serif; }
+  .site-nav a {
+    color: #9ca3af; font-size: 12px; text-decoration: none;
+    padding: 5px 12px; border-radius: 6px;
+    border: 1px solid transparent; font-family: 'Noto Serif JP', serif;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .site-nav a:hover { color: #e8c964; border-color: rgba(200,168,75,0.3); }
+  body { padding-top: 50px; }
+  .filter-active { background: linear-gradient(135deg, #92703a, #c8a84b) !important; border-color: transparent !important; color: #0a0a0f !important; font-weight: 700 !important; }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(232,201,100,0); }
+    50%      { box-shadow: 0 0 10px 3px rgba(232,201,100,0.3); }
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { min-height: 100vh; background: linear-gradient(135deg, #0a0a0f 0%, #111827 50%, #0a0a0f 100%); color: #e8d5a3; font-family: 'Noto Serif JP', Georgia, serif; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px; }
+  .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(232,197,100,0.2); border-radius: 16px; padding: 24px; max-width: 520px; width: 100%; box-shadow: 0 8px 48px rgba(0,0,0,0.5); }
+  .card-wide { max-width: 680px; }
+  .card-upload { max-width: 560px; }
+  .title { font-size: 24px; font-weight: 700; color: #e8c964; text-align: center; letter-spacing: 4px; margin-bottom: 6px; }
+  .sub { color: #9ca3af; text-align: center; font-size: 12px; margin-bottom: 18px; }
+  .btn { background: linear-gradient(135deg, #92703a, #c8a84b); border: none; color: #0a0a0f; padding: 10px 22px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 700; font-family: inherit; letter-spacing: 1px; }
+  .btn-ghost { background: transparent; border: 1px solid rgba(200,168,75,0.33); color: #e8d5a3; padding: 10px 22px; border-radius: 8px; cursor: pointer; font-size: 14px; font-family: inherit; }
+  .btn-danger { background: transparent; border: 1px solid rgba(248,113,113,0.33); color: #f87171; padding: 9px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: inherit; }
+  .btn:disabled, .btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
+  input { background: rgba(255,255,255,0.07); border: 1px solid rgba(200,168,75,0.27); color: #e8d5a3; padding: 10px 14px; border-radius: 8px; font-size: 15px; width: 100%; font-family: inherit; outline: none; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .badge-black { background: #111; color: #eee; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; border: 1px solid #555; }
+  .badge-white { background: #eee; color: #111; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; border: 1px solid #aaa; }
+  .screen { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; width: 100%; padding: 12px; }
+  .screen.active { display: flex; }
+  .kifu-item { background: rgba(255,255,255,0.04); border: 1px solid rgba(200,168,75,0.2); border-radius: 10px; padding: 11px 14px; cursor: pointer; transition: background 0.2s; margin-bottom: 7px; }
+  .kifu-item:hover { background: rgba(200,168,75,0.1); }
+  .score-item { background: rgba(255,255,255,0.04); border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 7px; }
+  .drop-zone { border: 2px dashed rgba(200,168,75,0.33); border-radius: 10px; padding: 20px 16px; text-align: center; cursor: pointer; background: rgba(200,168,75,0.04); margin-bottom: 12px; transition: border-color 0.2s; }
+  .drop-zone:hover { border-color: #c8a84b; }
+  .hint-badge { border-radius: 6px; padding: 2px 12px; font-size: 13px; font-weight: 700; }
+  .progress-bar { background: rgba(0,0,0,0.3); border-radius: 4px; height: 5px; overflow: hidden; margin: 4px 0; }
+  .progress-fill { background: linear-gradient(90deg, #c8a84b, #e8c964); height: 100%; transition: width 0.2s; }
+  .board-wrap { position: relative; display: inline-block; }
+  .feedback-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); background: rgba(0,0,0,0.7); border-radius: 12px; padding: 10px 24px; pointer-events: none; display: none; }
+  .feedback-overlay.show { display: block; }
+  .scroll-list { max-height: 65vh; overflow-y: auto; }
+</style>
+</head>
+<body>
+
+<!-- ===== AI研究モード モーダル ===== -->
+<div id="ai-research-modal" style="
+  display:none; position:fixed; inset:0; z-index:9999;
+  background:rgba(0,0,0,0.82); backdrop-filter:blur(6px);
+  align-items:center; justify-content:center; padding:16px;
+">
+  <div style="
+    background:#0f0f1a; border:1px solid rgba(139,92,246,0.4);
+    border-radius:16px; padding:24px; max-width:640px; width:100%;
+    max-height:90vh; overflow-y:auto;
+    box-shadow:0 0 40px rgba(139,92,246,0.15);
+  ">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#a78bfa;letter-spacing:2px">🤖 AI研究モード</div>
+        <div id="ai-move-label" style="font-size:11px;color:#6b7280;margin-top:2px"></div>
+      </div>
+      <button onclick="closeAIResearch()" style="
+        background:none;border:1px solid rgba(255,255,255,0.15);color:#9ca3af;
+        border-radius:8px;padding:5px 12px;cursor:pointer;font-size:13px;
+      ">✕ 閉じる</button>
+    </div>
+    <!-- APIキー入力エリア -->
+    <div id="ai-key-area" style="
+      background:rgba(255,255,255,0.04);border:1px solid rgba(139,92,246,0.3);
+      border-radius:10px;padding:14px;margin-bottom:14px;
+    ">
+      <div style="font-size:12px;color:#a78bfa;font-weight:700;margin-bottom:6px">🔑 Anthropic APIキーを入力</div>
+      <div style="font-size:11px;color:#6b7280;margin-bottom:10px">
+        キーはこのデバイスのみに保存されます。公開されません。<br>
+        <a href="https://console.anthropic.com" target="_blank" style="color:#a78bfa">console.anthropic.com</a> → 管理 → APIキー で取得できます。
+      </div>
+      <div style="display:flex;gap:8px">
+        <input id="ai-key-input" type="password" placeholder="sk-ant-api03-..." style="
+          flex:1;background:rgba(255,255,255,0.07);border:1px solid rgba(139,92,246,0.4);
+          color:#e8d5a3;padding:8px 12px;border-radius:8px;font-size:13px;
+          font-family:monospace;outline:none;
+        ">
+        <button onclick="saveApiKey()" style="
+          background:linear-gradient(135deg,#5b21b6,#7c3aed);border:none;color:white;
+          padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px;
+          font-family:inherit;font-weight:700;white-space:nowrap;
+        ">保存して使う</button>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:center;margin-bottom:14px">
+      <canvas id="ai-board" width="300" height="300" style="border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,0.5);display:block"></canvas>
+    </div>
+    <div style="text-align:center;margin-bottom:16px" id="ai-analyze-btn-area">
+      <button id="btn-ai-analyze" onclick="runAIAnalysis()" style="
+        background:linear-gradient(135deg,#5b21b6,#7c3aed);
+        border:none;color:white;padding:10px 28px;border-radius:10px;
+        font-size:14px;font-weight:700;font-family:inherit;
+        cursor:pointer;letter-spacing:1px;
+        box-shadow:0 4px 16px rgba(124,58,237,0.35);
+      ">✨ この局面の有力手を分析する</button>
+    </div>
+    <div id="ai-loading" style="display:none;text-align:center;padding:24px 0">
+      <div style="font-size:28px;margin-bottom:8px;animation:spin 1.2s linear infinite">⚙️</div>
+      <div style="color:#a78bfa;font-size:13px;letter-spacing:2px">AIが盤面を解析中...</div>
+    </div>
+    <div id="ai-result" style="display:none">
+      <div id="ai-situation" style="
+        background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);
+        border-radius:10px;padding:12px 14px;margin-bottom:14px;
+        font-size:13px;line-height:1.85;color:#c4b5fd;
+      "></div>
+      <div id="ai-candidates" style="display:flex;flex-direction:column;gap:10px"></div>
+      <div style="text-align:center;margin-top:14px">
+        <button onclick="runAIAnalysis()" style="
+          background:none;border:1px solid rgba(139,92,246,0.4);color:#a78bfa;
+          padding:7px 20px;border-radius:8px;cursor:pointer;font-size:12px;font-family:inherit;
+        ">🔄 再分析</button>
+        <button onclick="clearApiKey()" style="
+          background:none;border:1px solid rgba(255,255,255,0.1);color:#4b5563;
+          padding:7px 16px;border-radius:8px;cursor:pointer;font-size:11px;font-family:inherit;margin-left:8px;
+        ">🔑 APIキーを変更</button>
+      </div>
+    </div>
+    <div id="ai-error" style="display:none;text-align:center;padding:20px;color:#f87171;font-size:13px"></div>
+  </div>
+</div>
+
+<!-- サイトヘッダー -->
+<header class="site-header">
+  <a class="site-logo" href="index.html">⚫ 囲碁棋譜道場</a>
+  <nav class="site-nav"></nav>
+</header>
+
+<!-- トップ画面（棋譜選択） -->
+<div class="screen active" id="s-upload">
+  <div class="card card-wide">
+    <div style="text-align:center;margin-bottom:18px">
+      <div style="font-size:40px;margin-bottom:6px">⚫⚪</div>
+      <div class="title">囲碁棋譜記憶力ゲーム</div>
+      <div class="sub">棋譜を選択 → 記憶 → 再現 → 採点　全40局収録</div>
+      <div id="challenge-count" style="margin-top:10px;font-size:12px;color:#9ca3af;letter-spacing:1px">
+        累計チャレンジ回数：読み込み中...
+      </div>
+    </div>
+    <div class="scroll-list" id="top-kifu-list"></div>
+    <div style="margin-top:14px;text-align:center" id="upload-scores-btn">
+      <button class="btn-ghost" onclick="showScreen('s-scores')">🏆 スコア一覧</button>
+    </div>
+  </div>
+</div>
+
+<!-- 名前入力 -->
+<div class="screen" id="s-name">
+  <div class="card">
+    <div class="title">プレーヤー名</div>
+    <div class="sub">あなたの名前を入力してください</div>
+    <div class="row">
+      <input id="name-input" placeholder="例：山田太郎" onkeydown="if(event.key==='Enter')confirmName()">
+      <button class="btn" onclick="confirmName()">次へ</button>
+    </div>
+    <div style="margin-top:14px;text-align:center">
+      <button class="btn-ghost" onclick="showScreen('s-upload')">← 棋譜を変更</button>
+    </div>
+  </div>
+</div>
+
+<!-- 棋譜選択 -->
+<div class="screen" id="s-select">
+  <div class="card card-wide">
+    <div class="title" style="font-size:22px">棋譜を選択</div>
+    <div class="sub" id="select-sub">プレーヤー：　│　50手を3分以内に記憶</div>
+    <div class="scroll-list" id="kifu-list"></div>
+    <div style="margin-top:14px;text-align:center">
+      <button class="btn-ghost" onclick="showScreen('s-upload')">← 棋譜一覧に戻る</button>
+    </div>
+  </div>
+</div>
+
+<!-- グレード選択 -->
+<div class="screen" id="s-grade">
+  <div class="card" style="max-width:460px">
+    <div class="title" style="font-size:20px;margin-bottom:6px">グレードを選択</div>
+    <div id="grade-kifu-name" style="color:#9ca3af;font-size:12px;text-align:center;margin-bottom:20px"></div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
+      <button class="btn-ghost" onclick="selectGrade('上級')" style="padding:16px;border-radius:12px;text-align:left;border-color:rgba(252,165,165,0.4)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <span style="color:#fca5a5;font-weight:700;font-size:15px;letter-spacing:2px">上級</span>
+            <span style="color:#9ca3af;font-size:11px;margin-left:10px">ヒントなし</span>
+          </div>
+          <div style="text-align:right">
+            <div style="color:#e8c964;font-size:12px;font-weight:700">正解時 3点/問</div>
+            <div style="color:#6b7280;font-size:11px">最高 150点</div>
+          </div>
+        </div>
+      </button>
+      <button class="btn-ghost" onclick="selectGrade('中級')" style="padding:16px;border-radius:12px;text-align:left;border-color:rgba(252,211,77,0.4)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <span style="color:#fcd34d;font-weight:700;font-size:15px;letter-spacing:2px">中級</span>
+            <span style="color:#9ca3af;font-size:11px;margin-left:10px">ヒントあり 3択</span>
+          </div>
+          <div style="text-align:right">
+            <div style="color:#e8c964;font-size:12px;font-weight:700">正解時 2点/問</div>
+            <div style="color:#6b7280;font-size:11px">最高 100点</div>
+          </div>
+        </div>
+      </button>
+      <button class="btn-ghost" onclick="selectGrade('初級')" style="padding:16px;border-radius:12px;text-align:left;border-color:rgba(110,231,183,0.4)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <span style="color:#6ee7b7;font-weight:700;font-size:15px;letter-spacing:2px">初級</span>
+            <span style="color:#9ca3af;font-size:11px;margin-left:10px">ヒントあり 2択</span>
+          </div>
+          <div style="text-align:right">
+            <div style="color:#e8c964;font-size:12px;font-weight:700">正解時 1点/問</div>
+            <div style="color:#6b7280;font-size:11px">最高 50点</div>
+          </div>
+        </div>
+      </button>
+    </div>
+    <div style="text-align:center">
+      <button class="btn-ghost" onclick="showScreen('s-select')">← 棋譜選択に戻る</button>
+    </div>
+  </div>
+</div>
+
+<!-- 棋譜学習 -->
+<div class="screen" id="s-study">
+  <div class="card" style="max-width:420px">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <div>
+        <div id="study-title" style="color:#e8c964;font-weight:700;font-size:13px"></div>
+        <div id="study-players" style="color:#9ca3af;font-size:11px"></div>
+      </div>
+      <div id="study-timer" style="font-size:26px;font-weight:900;font-family:monospace"></div>
+    </div>
+    <div style="display:flex;justify-content:center;margin-bottom:10px">
+      <canvas id="study-board" width="340" height="340" style="border-radius:4px;box-shadow:0 4px 24px rgba(0,0,0,0.4);max-width:100%"></canvas>
+    </div>
+    <div style="text-align:center;margin-bottom:10px">
+      <div id="study-move-info" style="
+        color:#e8c964;font-size:14px;font-weight:700;
+        margin-bottom:8px;padding:8px 14px;
+        background:rgba(232,201,100,0.1);
+        border:1px solid rgba(232,201,100,0.35);
+        border-radius:8px;letter-spacing:1px;
+        animation:pulse 2s ease-in-out infinite;
+      ">👉 「次 ▶」ボタンを押して棋譜を記憶してください</div>
+      <div class="progress-bar"><div class="progress-fill" id="study-progress" style="width:0%"></div></div>
+      <div id="study-move-label" style="margin-top:5px;font-family:monospace;font-size:12px;color:#e8d5a3;min-height:18px"></div>
+    </div>
+    <div class="row" style="justify-content:center">
+      <button class="btn-ghost" onclick="studyPrev()" id="btn-prev">◀ 前</button>
+      <button class="btn-ghost" onclick="studyNext()" id="btn-next" style="border-color:rgba(232,201,100,0.6);color:#e8c964;font-weight:700">次 ▶</button>
+      <button class="btn" onclick="startQuiz()">記憶完了 → クイズへ</button>
+    </div>
+    <div style="margin-top:10px;text-align:center">
+      <button class="btn-ghost" id="btn-ai-research" onclick="openAIResearch()"
+        style="border-color:rgba(139,92,246,0.5);color:#a78bfa;font-size:12px;padding:7px 18px;letter-spacing:1px">
+        🤖 AI研究モード — 有力手を分析
+      </button>
+    </div>
+    <div style="margin-top:8px;text-align:center">
+      <button class="btn-danger" onclick="showScreen('s-select')">← 棋譜選択に戻る</button>
+    </div>
+  </div>
+</div>
+
+<!-- クイズ -->
+<div class="screen" id="s-quiz">
+  <div class="card" style="max-width:420px">
+    <div class="row" style="justify-content:space-between;margin-bottom:6px">
+      <div>
+        <div id="quiz-move-label" style="color:#e8c964;font-weight:700;font-size:13px"></div>
+        <div id="quiz-progress-label" style="color:#9ca3af;font-size:11px"></div>
+      </div>
+      <div id="quiz-timer" style="font-size:26px;font-weight:900;font-family:monospace"></div>
+    </div>
+    <div id="hint-legend" style="display:none;gap:10px;justify-content:center;align-items:center;margin-bottom:5px;flex-wrap:wrap">
+      <span class="hint-badge" style="background:rgba(59,130,246,0.13);border:1px solid #3b82f6;color:#3b82f6">A</span>
+      <span class="hint-badge" style="background:rgba(245,158,11,0.13);border:1px solid #f59e0b;color:#f59e0b">B</span>
+      <span class="hint-badge" style="background:rgba(16,185,129,0.13);border:1px solid #10b981;color:#10b981">C</span>
+      <span style="color:#9ca3af;font-size:11px">をクリック</span>
+    </div>
+    <div style="display:flex;justify-content:center;margin-bottom:8px">
+      <div class="board-wrap">
+        <canvas id="quiz-board" width="340" height="340" style="border-radius:4px;box-shadow:0 4px 24px rgba(0,0,0,0.4);max-width:100%"></canvas>
+        <div class="feedback-overlay" id="feedback-overlay">
+          <div id="feedback-text" style="font-size:22px;font-weight:900;letter-spacing:3px;text-align:center"></div>
+        </div>
+      </div>
+    </div>
+    <div class="row" style="justify-content:center">
+      <button class="btn-ghost" id="btn-hint" onclick="requestHint()" style="font-size:12px;color:#9ca3af">💡 ヒントを見る</button>
+      <button class="btn-danger" onclick="abortQuiz()">終了して記録</button>
+    </div>
+    <div id="quiz-instruction" style="text-align:center;margin-top:6px;color:#6b7280;font-size:11px">碁盤をクリックして答える　ヒントなし＋2点 / 不正解→ヒント自動表示</div>
+  </div>
+</div>
+
+<!-- 結果 -->
+<div class="screen" id="s-result">
+  <div class="card">
+    <div style="text-align:center">
+      <div id="result-trophy" style="font-size:42px;margin-bottom:4px"></div>
+      <div class="title">結果発表</div>
+      <div id="result-score" style="font-size:58px;font-weight:900;color:#e8c964;margin:8px 0;font-family:monospace;text-shadow:0 0 24px rgba(232,201,100,0.4)"></div>
+      <div id="result-player" style="color:#9ca3af;margin-bottom:3px"></div>
+      <div id="result-kifu" style="color:#6b7280;font-size:12px;margin-bottom:3px"></div>
+      <div id="result-answered" style="color:#6b7280;font-size:12px;margin-bottom:12px"></div>
+      <div id="result-perfect" style="color:#4ade80;font-weight:700;margin-bottom:10px;display:none">🎉 完璧！50手全問正解！</div>
+    </div>
+    <div class="row" style="justify-content:center">
+      <button class="btn" onclick="playAgain()">もう一度</button>
+      <button class="btn-ghost" onclick="showScreen('s-scores')">🏆 スコア一覧</button>
+      <button class="btn-ghost" onclick="showScreen('s-upload')">棋譜を変更</button>
+    </div>
+  </div>
+</div>
+
+<!-- スコア一覧 -->
+<div class="screen" id="s-scores">
+  <div class="card card-wide">
+    <div class="title">🏆 スコアランキング</div>
+    <!-- ローカル/グローバル切替 -->
+    <div style="display:flex;gap:8px;justify-content:center;margin:8px 0 12px" id="score-mode-bar">
+      <button class="btn-ghost filter-active" id="btn-mode-local" onclick="setScoreMode('local',this)" style="font-size:12px;padding:5px 16px;border-radius:100px">このデバイス</button>
+      <button class="btn-ghost" id="btn-mode-global" onclick="setScoreMode('global',this)" style="font-size:12px;padding:5px 16px;border-radius:100px">みんなのスコア</button>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:center;margin:0 0 12px" id="score-tab-bar">
+      <button class="btn-ghost filter-active" onclick="setScoreTab('上級',this)" style="font-size:12px;padding:5px 18px;border-radius:100px;border-color:rgba(252,165,165,0.5);color:#fca5a5">上級</button>
+      <button class="btn-ghost" onclick="setScoreTab('中級',this)" style="font-size:12px;padding:5px 18px;border-radius:100px;border-color:rgba(252,211,77,0.5);color:#fcd34d">中級</button>
+      <button class="btn-ghost" onclick="setScoreTab('初級',this)" style="font-size:12px;padding:5px 18px;border-radius:100px;border-color:rgba(110,231,183,0.5);color:#6ee7b7">初級</button>
+    </div>
+    <div class="sub" id="score-tab-sub">上級：最高150点</div>
+    <div class="scroll-list" id="scores-list"></div>
+    <div class="row" style="justify-content:center;margin-top:14px">
+      <button class="btn" onclick="showScreen('s-upload')">棋譜を選ぶ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== 定数 =====
+const BOARD_SIZE = 19;
+const COLS = "ABCDEFGHJKLMNOPQRST";
+const SGFCOLS = "abcdefghijklmnopqrs";
+
+// ===== Google Apps Script API =====
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyb8bmSkSMsdHxf6pXhHyt11SfOkH44dCO6Pa90DHLpcwT3O5FPKcV8Dmz-aTni8kOqEg/exec";
+
+// チャレンジ回数をトップ画面に表示
+async function loadChallengeCount() {
+  try {
+    const res = await fetch(GAS_URL);
+    const data = await res.json();
+    const el = document.getElementById('challenge-count');
+    if (el) el.textContent = `累計チャレンジ回数：${data.count} 回`;
+  } catch {
+    const el = document.getElementById('challenge-count');
+    if (el) el.textContent = '';
+  }
+}
+loadChallengeCount();
+
+// スコアをサーバーに送信
+async function postScoreToServer(entry) {
+  try {
+    await fetch(GAS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: JSON.stringify(entry),
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch(e) {
+    console.log('送信エラー:', e);
+  }
+}
+
+// グローバルスコアを取得してレンダリング
+let globalScores = null; // キャッシュ
+async function loadGlobalScores() {
+  const el = document.getElementById('scores-list');
+  el.innerHTML = '<div style="text-align:center;color:#6b7280;padding:24px">読み込み中...</div>';
+  try {
+    const res = await fetch(GAS_URL);
+    const data = await res.json();
+    globalScores = data.scores || [];
+    renderScoreList();
+  } catch {
+    el.innerHTML = '<div style="text-align:center;color:#f87171;padding:24px">取得できませんでした</div>';
+  }
+}
+
+// ===== 内蔵棋譜データ（Master = AlphaGo 2016年末対局集） =====
+const KIFU_DATA = [
+  { id:"game01", title:"第01局 Master vs NN",          black:"NN",            white:"Master(Magist)", date:"2016-12-29", level:"初級",
+    sgf:`(;DT[2016-12-29 19:01:34]KM[6.5]PB[NN]PC[Tygem]PW[Magist]RE[W+R]RO[01]TC[3]TM[60]TT[20]WR[9P];B[qd];W[pp];B[dc];W[dp];B[cn];W[fq];B[ch];W[od];B[oc];W[nc];B[pc];W[nd];B[qf];W[jc];B[hc];W[pd];B[qc];W[dd];B[cd];W[ec];B[de];W[ed];B[cc];W[ee];B[df];W[id];B[ge];W[gd];B[hd];W[he];B[ie];W[hf];B[jb];W[ic];B[gc];W[gf];B[ib];W[kc];B[kb];W[lc];B[fb];W[qn];B[jf];W[ng];B[jh];W[gi];B[jj];W[eb];B[db];W[fc];B[gb];W[di];B[ni];W[pg];B[pf];W[of];B[oh];W[og];B[bp];W[kp];B[cq];W[co];B[bo];W[dn];B[cm];W[dm];B[dl];W[el];B[dk];W[ek];B[ci];W[jl];B[lh];W[lk];B[qi];W[qg];B[rf];W[nk];B[mf];W[pi];B[ph];W[qh];B[pj];W[ri];B[oi];W[rj];B[qk];W[rl];B[or];W[pq];B[lq];W[kq];B[lp];W[kr];B[lo];W[jn];B[np];W[nn];B[pr];W[qr];B[mn];W[nm];B[qq];W[qp];B[lr];W[no];B[nq];W[mo];B[mr];W[mp];B[ns];W[ls];B[ps];W[ki];B[li];W[kj];B[rk];W[sk];B[ql];W[rm];B[rg];W[rh];B[hh];W[gh];B[mg];W[ji];B[nh];W[dq];B[ii];W[ig];B[ih];W[kh];B[kg];W[jg];B[hg];W[if];B[gg];W[ff];B[fg];W[kf];B[mk];W[ml];B[mj];W[lg];B[ok];W[nj])` },
+  { id:"game02", title:"第02局 Master vs NN",          black:"NN",            white:"Master(Magist)", date:"2016-12-29", level:"初級",
+    sgf:`(;DT[2016-12-29 19:20:57]KM[6.5]PB[NN]PC[Tygem]PW[Magist]RE[W+R]RO[02]TC[3]TM[60]TT[20]WR[9P];B[pd];W[pp];B[dc];W[cp];B[ce];W[eq];B[qf];W[qn];B[jc];W[df];B[de];W[ff];B[kq];W[mq];B[hq];W[pg];B[pf];W[ng];B[of];W[ip];B[iq];W[kp];B[jp];W[jo];B[jq];W[ko];B[lq];W[mp];B[og];W[ni];B[pj];W[hn];B[fr];W[fq];B[er];W[dr];B[gq];W[es];B[gs];W[ob];B[qb];W[lc];B[ke];W[le];B[kf];W[jb];B[kb];W[jd];B[lb];W[kd];B[mc];W[ic];B[kc];W[ld];B[id];W[mb];B[hc];W[ib];B[nb];W[nc];B[ma];W[md];B[mb];W[hd];B[ie];W[gc];B[nd];W[lg];B[lf];W[mf];B[he];W[gd];B[jh];W[li];B[gh];W[eb];B[ec];W[fb];B[bg];W[jj];B[dh];W[ge];B[ij];W[ik];B[hj];W[ji];B[ih];W[oc];B[oa];W[pa];B[pb];W[na];B[qa];W[oh];B[qi];W[cm];B[qq];W[qp];B[pr];W[rq];B[hb];W[ha];B[ja];W[gb];B[mh];W[lh];B[ok];W[nk];B[nl];W[ol];B[nj];W[mk];B[mj];W[lj];B[mi];W[mg];B[pl];W[om];B[pm];W[on];B[rp];W[ro];B[io];W[in];B[rr];W[sp];B[mr];W[nr];B[or];W[lr];B[os];W[ms];B[sr];W[go];B[kr];W[cj];B[hk];W[il];B[dk];W[ck];B[dq];W[cq];B[dl];W[dj];B[ej];W[dm];B[em];W[en];B[fp];W[dp];B[fl];W[ei];B[fj];W[rl];B[rk];W[qk];B[rj];W[ql];B[db];W[pk];B[oj];W[nh];B[cl];W[bl];B[bi];W[bj];B[fn];W[rh];B[qh];W[qj];B[pi];W[ri];B[rg];W[sk])` },
+  { id:"game03", title:"第03局 Master vs NN",          black:"Master(Magist)",white:"NN",            date:"2016-12-29", level:"初級",
+    sgf:`(;BR[9p]DT[2016-12-29 19:49:39]KM[6.5]PB[Magist]PC[Tygem]PW[NN]RE[B+R]RO[03]TC[3]TM[60]TT[20];B[pd];W[pp];B[dc];W[cp];B[cf];W[jc];B[eq];W[iq];B[do];W[co];B[dn];W[cm];B[nq];W[oq];B[np];W[pn];B[kq];W[io];B[ko];W[fo];B[gq];W[gp];B[hq];W[hp];B[ir];W[hr];B[gr];W[jr];B[hs];W[jq];B[ql];W[dp];B[ep];W[eo];B[km];W[rn];B[dm];W[dl];B[fm];W[cn];B[el];W[dk];B[hm];W[im];B[il];W[hl];B[gm];W[jm];B[jl];W[jo];B[kn];W[hk];B[ej];W[dr];B[er];W[kl];B[ij];W[hj];B[jj];W[hi];B[fi];W[ll];B[jh];W[js];B[kp];W[is];B[fp];W[go];B[fs];W[hr];B[om];W[gs];B[ih];W[pm];B[hs];W[lr];B[or];W[pr];B[op];W[pq];B[ol];W[lq];B[on];W[nr];B[mr];W[os];B[hc];W[mc];B[oc];W[me];B[ld];W[lc];B[jd];W[dg];B[ci];W[cg];B[bf];W[df];B[bg];W[dd];B[ed];W[ee];B[cd];W[fd];B[de];W[ec];B[dd];W[hh];B[if];W[hf];B[he];W[ge];B[hg];W[gf];B[gg];W[fg];B[fh];W[hd];B[ic];W[ie];B[je];W[jf];B[ig];W[id];B[gc];W[gd];B[kc];W[jb];B[kb];W[kf];B[mh];W[ng];B[nh];W[pg];B[oh];W[qe];B[qd];W[fc];B[ib];W[pe];B[oe];W[of];B[ne];W[nf];B[md];W[le];B[kd];W[qi];B[pj];W[qj];B[qk])` },
+  { id:"game04", title:"第04局 Master vs Xie Erhao",   black:"Xie Erhao",     white:"Master(Magist)", date:"2016-12-29", level:"初級",
+    sgf:`(;BR[9p]DT[2016-12-29 20:14:20]KM[6.5]PB[Xie Erhao]PC[Tygem]PW[Magist]RE[W+R]RO[04]TC[3]TM[60]TT[20]WR[9p];B[qd];W[pp];B[cd];W[dp];B[cn];W[fq];B[qn];W[nq];B[dj];W[ed];B[hd];W[dg];B[ee];W[fe];B[ef];W[dd];B[ce];W[cc];B[bc];W[bb];B[fd];W[db];B[cf];W[oc];B[ld];W[pe];B[pd];W[od];B[oe];W[qe];B[re];W[rf];B[rd];W[ne];B[of];W[pg];B[nf];W[me];B[pc];W[ob];B[pb];W[le];B[jd];W[qi];B[nh];W[lc];B[qk];W[pj];B[pk];W[nj];B[lg];W[kd];B[kc];W[ke];B[lb];W[mc];B[lj];W[ok];B[oi];W[oj];B[on];W[pm];B[qm];W[pl];B[ql];W[nm];B[om];W[ol];B[pn];W[rp];B[nn];W[mm];B[mn];W[km];B[jg];W[kk];B[mq];W[np];B[mp];W[kj];B[mr];W[nr];B[iq];W[jc];B[ic];W[kb];B[if];W[bp];B[bo];W[dk];B[ck];W[cl];B[dl];W[ek];B[el];W[cj];B[bk];W[fl];B[bl];W[fk];B[di];W[fc];B[gd];W[fi];B[bq];W[cq];B[ap];W[hr];B[ir];W[hq];B[io];W[ip];B[jp];W[hp];B[jo];W[eh];B[ch];W[li];B[lh];W[mi];B[cr];W[dr];B[cp];W[dq];B[ro];W[qq];B[gh];W[gi];B[jb];W[kc];B[hi];W[hj];B[hh];W[bd];B[be];W[ac];B[ns];W[os];B[ms];W[pr];B[hs];W[gs];B[is];W[qg];B[oa];W[br];B[ar];W[bs];B[ij];W[ik];B[hk];W[gj];B[rj];W[ii];B[ih];W[jj];B[do];W[ri];B[fp];W[fr];B[kn];W[jm];B[fm];W[gm];B[fn];W[gb];B[hb];W[ja];B[ma];W[nb];B[na];W[ib];B[ha];W[je];B[ie];W[la];B[pa];W[mb];B[ep];W[cg];B[bg];W[dh];B[ci];W[gn];B[go];W[ho];B[in];W[gp];B[fo];W[im];B[ae];W[qj];B[rk];W[rb];B[rc];W[qb];B[sb];W[ga];B[ra];W[kh];B[kg];W[jh];B[qo];W[qp];B[sg];W[sh];B[sf];W[rg];B[se];W[ia];B[hc];W[ln];B[lo];W[lm];B[no];W[jn];B[ko];W[fh];B[fg];W[so];B[sn];W[sp])` },
+  { id:"game05", title:"第05局 Master vs Yu Zhiying",  black:"Master(Magist)",white:"Yu Zhiying",    date:"2016-12-29", level:"初級",
+    sgf:`(;BR[9p]DT[2016-12-29 20:51:02]KM[6.5]PB[Magist]PC[Tygem]PW[Yu Zhiying]RE[B+R]RO[05]TC[3]TM[60]TT[20]WR[5p];B[pd];W[dd];B[qp];W[dq];B[nq];W[qf];B[nc];W[qj];B[co];W[ck];B[fp];W[ep];B[eo];W[fq];B[gp];W[gq];B[hp];W[hq];B[ip];W[iq];B[ci];W[ek];B[cf];W[ei];B[bd];W[ef];B[fd];W[df];B[ce];W[ed];B[jd];W[jp];B[jo];W[kp];B[fc];W[rd];B[dj];W[ej];B[dh];W[fn];B[eh];W[ge];B[gh];W[fo];B[hd];W[hg];B[gg];W[cj];B[hf];W[bq];B[bi];W[hj];B[pf];W[pg];B[of];W[ph];B[jj];W[mh];B[jl];W[le];B[lc];W[if];B[he];W[qn];B[op];W[rp];B[rq];W[qo];B[pp];W[on];B[hl];W[hn];B[in];W[hm];B[im];W[gl];B[mk];W[qc];B[ok];W[pl];B[qe];W[re];B[qg];W[rf];B[nh];W[ii];B[pi];W[qh];B[qi];W[ri];B[pj];W[qk];B[kh];W[jg];B[mg];W[mr];B[lq];W[lr];B[kq];W[mq];B[lp];W[jq];B[kr];W[mp];B[lo];W[no];B[ro];W[rn];B[sp];W[bj];B[di];W[dk];B[kf])` },
+  { id:"game06", title:"第06局 Master vs Li Xiangyu",  black:"Master(Magist)",white:"Li Xiangyu",   date:"2016-12-29", level:"初級",
+    sgf:`(;BR[9p]DT[2016-12-29 22:02:39]KM[6.5]PB[Magist]PC[Tygem]PW[Li Xiangyu]RE[B+R]RO[06]TC[3]TM[60]TT[20]WR[9p];B[pd];W[pp];B[dc];W[cp];B[cf];W[nc];B[qf];W[pb];B[eq];W[qc];B[nq];W[qn];B[cm];W[do];B[em];W[fo];B[hq];W[qh];B[nd];W[md];B[oc];W[ne];B[ob];W[re];B[od];W[me];B[of];W[rf];B[qg];W[rg];B[qd];W[rc];B[ph];W[qi];B[mg];W[lb];B[id];W[nb];B[mc];W[lc];B[na];W[mb];B[pi];W[pj];B[oj];W[ib];B[pk];W[qj];B[nk];W[ol];B[ok];W[dj];B[fj];W[dl];B[dm];W[fi];B[ei];W[fk];B[ej];W[ek];B[gk];W[fl];B[gn];W[gj];B[fn];W[hj];B[di];W[hm];B[cr];W[fq];B[fr];W[er];B[dr];W[ep];B[es];W[hp];B[gq];W[gp];B[cj];W[dk];B[bk];W[ip];B[hn];W[im];B[in];W[kp];B[jm];W[mp];B[fh];W[jl];B[jk];W[km];B[jn];W[il];B[kl];W[kk];B[ll];W[kj];B[pq];W[qq];B[qr];W[qp];B[or];W[np];B[lq];W[lp];B[gc];W[cc];B[cd];W[mj];B[ni];W[db];B[cb];W[fc];B[ec];W[fd];B[fb];W[gd];B[hc];W[eb];B[hb];W[bc];B[ea];W[dd];B[da];W[ce];B[ed];W[bd];B[bf];W[ee];B[df])` },
+  { id:"game07", title:"第07局 Master vs NN",          black:"Master(Magist)",white:"NN",            date:"2016-12-29", level:"初級",
+    sgf:`(;BR[9p]DT[2016-12-29 22:40:09]KM[6.5]PB[Magist]PC[Tygem]PW[NN]RE[B+R]RO[07]TC[3]TM[60]TT[20];B[pd];W[dd];B[qp];W[dq];B[nq];W[qf];B[nc];W[qj];B[co];W[ck];B[fp];W[ep];B[eo];W[fq];B[gp];W[gq];B[hp];W[hq];B[ip];W[iq];B[ci];W[jp];B[cf];W[fc];B[ej];W[el];B[jo];W[kp];B[gk];W[cm];B[dp];W[eq];B[fm];W[bi];B[bh];W[bj];B[cc];W[cd];B[bd];W[dc];B[bb];W[cb];B[bc];W[ic];B[gd];W[he];B[ge];W[hb];B[rd];W[bp];B[qh];W[qn];B[ql];W[ph];B[pg];W[pi];B[qg];W[qq];B[pq];W[rp];B[rq];W[qr];B[ro];W[pp];B[qo];W[oq];B[op];W[pr];B[po];W[np];B[pq];W[or];B[nh];W[oo];B[on];W[pp];B[no];W[op];B[pn];W[ni];B[mi];W[nj];B[mj];W[nk];B[mk];W[nl];B[lm];W[oh];B[og];W[qk];B[pl];W[rl];B[rm];W[sk];B[ri];W[mm];B[mn];W[ll];B[ml];W[nm];B[kn];W[mh];B[ng];W[rj];B[lh];W[hf];B[hh];W[lc];B[bo];W[ch];B[dh];W[cg];B[bg];W[dg];B[eh];W[df];B[ce];W[fg];B[de];W[ff];B[ee];W[hg];B[ih];W[jg];B[jh];W[nb];B[ob];W[mb];B[md];W[oc];B[pc];W[oa];B[pb];W[ke];B[db];W[eb];B[ca];W[mf];B[mg];W[me];B[ne];W[dj];B[ek];W[fl];B[em];W[fi];B[gi];W[dl];B[gl];W[cp];B[do];W[ap];B[rr];W[kg];B[ld];W[kd];B[fh];W[di];B[pk];W[pj];B[hd];W[id];B[ed])` },
+  { id:"game08", title:"第08局 Master vs Han Yizou",   black:"Han Yizou",     white:"Master(Magist)", date:"2016-12-29", level:"中級",
+    sgf:`(;BR[9p]DT[2016-12-29 23:07:52]KM[6.5]PB[Han Yizou]PC[Tygem]PW[Magist]RE[W+R]RO[08]TC[3]TM[60]TT[20]WR[9p];B[pd];W[pp];B[cd];W[dp];B[cn];W[ec];B[fq];W[de];B[ce];W[df];B[cg];W[dn];B[dm];W[en];B[co];W[cp];B[dg];W[iq];B[fg];W[hc];B[em];W[gp];B[qn];W[np];B[do];W[ep];B[eo];W[fp];B[qq];W[qp];B[rp];W[pq];B[rr];W[qr];B[rq];W[fn];B[fm];W[qf];B[qh];W[nc];B[pf];W[qc];B[pc];W[qd];B[pe];W[qe];B[pb];W[qg];B[pg];W[kd];B[ph];W[qb];B[on];W[nn];B[nm];W[mn];B[mm];W[lm];B[ll];W[om];B[ol];W[kl];B[lk];W[kk];B[km];W[ln];B[jm];W[pm];B[pn];W[lj];B[ml];W[kj];B[jp];W[jq];B[kp];W[lq];B[ik];W[ij];B[hk];W[hj];B[lp];W[mq];B[ji];W[jj];B[gj];W[gi];B[fj];W[hg];B[lf];W[jf];B[rg];W[rf];B[mj];W[mi];B[nj];W[ni];B[oi];W[gn];B[fi];W[gm];B[im];W[cm];B[cl];W[bm])` },
+  { id:"game09", title:"第09局 Master vs Meng Tailing", black:"Master(Magist)",white:"Meng Tailing", date:"2016-12-29", level:"中級",
+    sgf:`(;BR[9p]DT[2016-12-29 23:30:11]KM[6.5]PB[Magist]PC[Tygem]PW[Meng Tailing]RE[B+4.5]RO[09]TC[3]TM[60]TT[20]WR[6p];B[pd];W[dd];B[qp];W[dq];B[nq];W[qf];B[nc];W[qj];B[co];W[ck];B[fp];W[ep];B[eo];W[fq];B[gp];W[gq];B[hp];W[hq];B[ip];W[iq];B[ci];W[jp];B[cf];W[fo];B[dp];W[eq];B[fn];W[go];B[en];W[gn];B[cq];W[gm];B[fc];W[fd];B[gd];W[fe];B[ec];W[dc];B[be];W[cr];B[fl];W[ek];B[el];W[ei];B[fk];W[di];B[ch];W[fj];B[eg];W[df];B[de];W[ed];B[hc];W[fg];B[ef];W[ff];B[jd];W[gj];B[bq];W[md];B[pf];W[pg];B[of];W[qe];B[qd];W[mc];B[nb];W[lf];B[pi];W[qi];B[ph];W[og];B[qh];W[qg];B[rh];W[pj];B[ni];W[od];B[nd];W[ne];B[nf];W[ng];B[me];W[oj];B[mf];W[mg];B[le];W[rd];B[rc];W[pe];B[oe];W[re];B[qm];W[om];B[op];W[no];B[hk];W[gk];B[gl];W[hl];B[hm];W[il];B[hn];W[im];B[ho];W[in];B[kf];W[io];B[kh];W[lg];B[kg];W[qc];B[pc];W[qb];B[pb];W[li];B[lh];W[mh];B[rb];W[ki];B[ji];W[mi];B[rk];W[rj];B[oo];W[pn];B[rn];W[nn];B[jj];W[ih];B[jh];W[br];B[cm];W[qq];B[rp];W[qo];B[ro];W[mq];B[mr];W[lr];B[nr];W[mp];B[bc];W[kk];B[jk];W[bl];B[kj];W[lk];B[bm];W[aq];B[ap];W[ar];B[bo];W[bj];B[jl];W[km];B[qk];W[sk];B[sl];W[sj];B[ol];W[nl];B[ok];W[pk];B[pl];W[nk];B[db];W[cb];B[eb];W[cc];B[cd];W[eh];B[dg];W[bb];B[ab];W[he];B[hi];W[hj];B[ii];W[je];B[ke];W[dl];B[gi];W[fi];B[gh];W[fh];B[bi];W[cj];B[ls];W[kr];B[ql];W[hd];B[id];W[np];B[pq];W[dm];B[dn];W[qn];B[ie];W[ge];B[gc];W[if];B[ig];W[hg];B[jf];W[jg];B[kl];W[ll];B[ig];W[ad];B[ac];W[jg];B[jm];W[jn];B[ig];W[bp];B[cp];W[jg];B[ks];W[js];B[ms];W[ig];B[ik];W[ai];B[ah];W[aj];B[al];W[ak];B[am];W[gg];B[lm];W[kn];B[cl];W[sm];B[rl];W[sd];B[dk];W[dj];B[jr];W[is];B[ir];W[hs];B[hr];W[gs];B[dr];W[er];B[es];W[gr];B[kq];W[lq];B[sc];W[on];B[lj];W[mj];B[ml];W[mk];B[nh];W[nj];B[po];W[dh];B[bg];W[da];B[ea];W[ca];B[bk];W[qa];B[pa];W[bl];B[bd];W[pr];B[qr];W[bk];B[em];W[dk];B[rm])` },
+  { id:"game10", title:"第10局 Master vs Meng Tailing", black:"Meng Tailing",  white:"Master(Magist)", date:"2016-12-30", level:"中級",
+    sgf:`(;BR[6p]DT[2016-12-30 00:08:22]KM[6.5]PB[Meng Tailing]PC[Tygem]PW[Magist]RE[W+R]RO[10]TC[3]TM[60]TT[20]WR[9p];B[pd];W[pp];B[dc];W[cp];B[cf];W[ep];B[nq];W[qn];B[pr];W[nc];B[qf];W[id];B[oc];W[nd];B[gc];W[dd];B[cd];W[ec];B[de];W[ed];B[db];W[gd];B[hd];W[cc];B[cb];W[he];B[hc];W[ic];B[ie];W[hf];B[je];W[ib];B[eb];W[fc];B[gb];W[ee];B[ef];W[ff];B[eg];W[fb];B[fa];W[fe];B[gq];W[mp];B[mq];W[kp];B[np];W[qq];B[er];W[gp];B[hp];W[fq];B[fr];W[hq];B[gr];W[iq];B[dq];W[ho];B[dp];W[do];B[co];W[cn];B[bo];W[dn];B[bn];W[bm];B[cm];W[dm];B[cl];W[bl];B[bp];W[ck];B[lp];W[lc];B[ql];W[qc];B[nb];W[re];B[qe];W[rf];B[mb];W[pb];B[mc];W[md];B[kc];W[kd];B[lb];W[ld];B[ob];W[qg];B[pg];W[qd];B[qh];W[rg];B[pf];W[oe];B[pe];W[mg];B[dl];W[el];B[gg];W[fg];B[dk];W[bc];B[bb];W[eh];B[ek];W[bd];B[ce];W[cg];B[bg];W[bh];B[fl];W[fn];B[cj];W[ph];B[ng];W[mh];B[kf];W[kb];B[mf];W[lf];B[lg];W[nf];B[oh];W[pi];B[le];W[oi];B[ka];W[jc];B[ja];W[ia];B[ga];W[nh];B[og];W[lh];B[kh];W[ki];B[jh];W[ji];B[ih];W[oa];B[od];W[jd];B[la];W[na];B[jb];W[pc])` },
+  { id:"game11", title:"第11局 Master vs NN",          black:"NN",            white:"Master",         date:"2016-12-30", level:"上級",
+    sgf:`(;DT[2016-12-30 10:02:17]KM[6.5]PB[NN]PC[Tygem]PW[Master]RE[W+R]RO[11]TC[3]TM[60]TT[20]WR[9p];B[qd];W[dp];B[pp];W[dc];B[ce];W[oc];B[kd];W[pe];B[qe];W[pf];B[qg];W[hd];B[pc];W[pb];B[qb];W[ci];B[bc];W[de];B[dd];W[ed];B[cd];W[df];B[ec];W[fd];B[eb];W[fq];B[mc];W[oh];B[nq];W[mp];B[mq];W[kp];B[dj];W[cl];B[di];W[el];B[cg];W[fc];B[fb];W[gb];B[hb];W[hc];B[ga];W[gc];B[db];W[lq];B[ib];W[gh];B[dg];W[np];B[op];W[nn];B[pn];W[qq];B[qp];W[hk];B[cq];W[cp];B[bp];W[bo];B[br];W[or];B[oq];W[ol];B[jj];W[pr];B[ql];W[kg];B[jl];W[jc];B[ob];W[kk];B[jk];W[nb];B[od];W[nc];B[nd];W[mb];B[pd];W[li];B[im];W[qk];B[rk];W[hn];B[hm];W[gn];B[jo];W[dr];B[dq];W[er];B[jp];W[jq];B[ep];W[cn];B[dn];W[eq];B[cr];W[ip];B[ap];W[ao];B[aq];W[jn];B[gm];W[fm];B[gk];W[rl];B[rm];W[pl];B[sl];W[qm];B[rl];W[gj];B[fk];W[cj];B[ih];W[dk];B[jg];W[kh];B[fj];W[eg];B[eh];W[fg];B[qj];W[lc];B[md];W[kc];B[rq];W[rr];B[rp];W[sr];B[nr];W[os];B[ko];W[in];B[mn];W[mm];B[lm];W[ml];B[lo];W[lp];B[ll];W[lk];B[kl];W[mo];B[ln];W[lr];B[iq];W[hq];B[oj];W[nj];B[pa];W[hi];B[fl];W[ii];B[kf];W[jd];B[je];W[oi];B[ch];W[ek];B[pj];W[lf];B[ld];W[if];B[jf];W[qh];B[nk];W[mk];B[mg];W[mf])` },
+  { id:"game12", title:"第12局 Master vs NN",          black:"NN",            white:"Master",         date:"2016-12-30", level:"上級",
+    sgf:`(;DT[2016-12-30 11:45:39]KM[6.5]PB[NN]PC[Tygem]PW[Master]RE[W+R]RO[12]TC[3]TM[60]TT[20]WR[9p];B[qd];W[pp];B[dc];W[dp];B[ce];W[oc];B[md];W[mc];B[lc];W[ld];B[nc];W[mb];B[me];W[nd];B[kd];W[lb];B[le];W[jc];B[qn];W[nq];B[pj];W[ne];B[pg];W[og];B[ph];W[cn];B[qp];W[qq];B[rq];W[qo];B[rp];W[pn];B[ro];W[po];B[pm];W[om];B[pl];W[ip];B[pq];W[qr];B[pr];W[oq];B[qs];W[qm];B[rn];W[df];B[bg];W[ec];B[ed];W[fd];B[dd];W[lm];B[no];W[nn];B[ol];W[mn];B[gq];W[hq];B[dq];W[eq];B[er];W[cq];B[dr];W[ep];B[cr];W[bq];B[fq];W[hr];B[gr];W[go];B[br];W[eb];B[fe];W[gd];B[ge];W[hd];B[dk];W[if];B[gk];W[fi];B[hj];W[hi];B[ii];W[hh];B[jl];W[ij];B[ho];W[gp];B[hn];W[fp];B[hs];W[fs];B[gs];W[ar];B[bs];W[ik];B[kn];W[kp];B[kk];W[ji];B[lo];W[mo];B[lp];W[lq];B[mg];W[ch];B[cg];W[hl];B[cm];W[bm];B[bn];W[cl];B[dm];W[bk];B[mp];W[or];B[rr];W[kr];B[np];W[op];B[cj];W[dl];B[ki];W[ci];B[eh];W[ei];B[am];W[bl];B[co];W[cp];B[bj];W[el];B[dg];W[im];B[il];W[hm])` },
+  { id:"game13", title:"第13局 Master vs atomy",       black:"atomy",         white:"Master",         date:"2016-12-30", level:"上級",
+    sgf:`(;DT[2016-12-30 12:06:51]KM[6.5]PB[atomy]PC[Tygem]PW[Master]RE[W+R]RO[13]TC[3]TM[60]TT[20]WR[9p];B[pd];W[pp];B[cd];W[dp];B[cn];W[ec];B[fq];W[de];B[dd];W[ed];B[ee];W[ce];B[be];W[bf];B[bd];W[dg];B[fe];W[hc];B[eo];W[ci];B[db];W[dc];B[cc];W[eb];B[cb];W[fg];B[cq];W[nq];B[nc];W[kc];B[qj];W[hq];B[rp];W[pm];B[mp];W[np];B[jq];W[ho];B[mq];W[dq];B[cp];W[do];B[dn];W[dr];B[er];W[co];B[bo];W[bn];B[bp];W[en];B[ep];W[fo];B[fp];W[em];B[cm];W[kp];B[kq];W[mo];B[lo];W[lp];B[lq];W[ko];B[ln];W[mn];B[io];W[jn];B[go];W[hn];B[hr];W[lm];B[hp];W[ip];B[gp];W[kf];B[rm];W[pi];B[pj];W[oi];B[oj];W[ni];B[qi];W[pg];B[qh];W[md];B[ck];W[cl];B[dl];W[bl];B[dm];W[dk];B[ek];W[dj];B[el];W[bm];B[gk];W[nd];B[oc];W[hj];B[ph];W[og];B[oh];W[nh];B[qg];W[pe];B[qe];W[oe];B[lb];W[kb];B[qf];W[gj];B[lc];W[ld];B[mk];W[lj];B[qq];W[qo];B[ro];W[hk];B[mj];W[li];B[hl];W[il];B[bg];W[cg];B[af];W[cf];B[gb];W[gc];B[bk];W[bj];B[hm];W[in];B[ea];W[fa];B[fc];W[fd];B[fb];W[gd];B[da];W[gn];B[ll];W[ej];B[fl];W[gm])` },
+  { id:"game14", title:"第14局 Master vs NN",          black:"Master",        white:"NN",             date:"2016-12-30", level:"上級",
+    sgf:`(;BR[9p]DT[2016-12-30 12:35:24]KM[6.5]PB[Master]PC[Tygem]PW[NN]RE[B+R]RO[14]TC[3]TM[60]TT[20];B[pd];W[dp];B[pq];W[dc];B[ce];W[ci];B[ed];W[ec];B[fd];W[fc];B[gd];W[hc];B[ck];W[cm];B[dj];W[eh];B[ei];W[di];B[fh];W[ej];B[fi];W[ek];B[dl];W[dk];B[cl];W[cj];B[eg];W[dn];B[dm];W[cn];B[fm];W[gk];B[hm];W[ik];B[jl];W[jk];B[gp];W[kl];B[jm];W[lj];B[km];W[ll];B[dr];W[fq];B[gq];W[er];B[dq];W[fp];B[gr];W[go];B[fl];W[gj];B[fo];W[fn];B[eo];W[en];B[fr];W[ep];B[cp];W[bp];B[bq];W[co];B[cq];W[gn];B[hl];W[io];B[ko];W[bm];B[eq];W[do];B[po];W[qm];B[qf];W[ro];B[pm];W[pl];B[om];W[qk];B[jp];W[mn];B[mp];W[pb];B[pc];W[ob];B[qb];W[nd];B[ie];W[rb];B[qc];W[qa];B[rc];W[qp];B[pp];W[ic];B[ih];W[rg];B[qg];W[qh];B[ph];W[rh];B[jd];W[ld];B[jc];W[og];B[ne];W[me];B[nc];W[mc];B[nb];W[oc];B[od];W[mb];B[md];W[ln];B[jo];W[nd];B[na];W[ma];B[md];W[kn];B[jn];W[nd];B[bo];W[oa];B[bk];W[jf];B[if];W[nf];B[ji])` },
+  { id:"game15", title:"第15局 Master vs Park Jung-hwan", black:"Park Jung-hwan", white:"Magister",  date:"2016-12-30", level:"上級",
+    sgf:`(;BR[9p]DT[2016-12-30 13:02:15]KM[6.5]PB[Park Jung-hwan]PC[Tygem]PW[Magister]RE[W+T]RO[15]TC[3]TM[60]TT[20]WR[9p];B[pd];W[pp];B[dc];W[cp];B[ce];W[eq];B[qf];W[qn];B[jc];W[df];B[cf];W[dh];B[kp];W[ec];B[dd];W[fe];B[nq];W[eb];B[dg];W[eg];B[cg];W[hc];B[eh];W[fg];B[mc];W[oq];B[np];W[iq];B[co];W[do];B[cn];W[bp];B[em];W[fl];B[dk];W[ej];B[fm];W[jo];B[gl];W[gk];B[hk];W[hl];B[gm];W[gj];B[ko];W[jn];B[kn];W[jm];B[dj];W[di];B[ci];W[ch];B[bh];W[ei];B[bj];W[qk];B[pn];W[qm];B[po];W[qo];B[qq];W[op];B[or];W[pr];B[nr];W[qr];B[oo];W[qp];B[je];W[qc];B[pc];W[rd];B[qd];W[rb];B[qb];W[rc];B[pb];W[rf];B[qg];W[rg];B[qh];W[dn];B[kh];W[dm];B[el];W[jb];B[kb];W[ic];B[jd];W[re];B[jr];W[jq];B[kq];W[ir];B[pj];W[kj];B[lj];W[lk];B[li];W[mk];B[db];W[da];B[gp];W[gq];B[ep];W[fp];B[fo];W[fq];B[cm];W[mn];B[no];W[cb];B[bb];W[cc];B[bc];W[jh];B[jg];W[ki];B[lh];W[ih];B[ig];W[hh];B[dl];W[eo];B[bo];W[ao];B[an];W[ap];B[lm];W[km];B[ib];W[hb];B[ja];W[ln];B[kr];W[qj];B[rh];W[ra];B[oj];W[mj];B[mi];W[qi];B[pi];W[ri];B[ba];W[he];B[en];W[dp];B[ca];W[hm])` },
+  { id:"game16", title:"第16局 Master vs Lian Xiao",   black:"Lian Xiao",     white:"Master",         date:"2016-12-30", level:"上級",
+    sgf:`(;BR[7p]DT[2016-12-30 13:52:26]KM[6.5]PB[Lian Xiao]PC[Tygem]PW[Master]RE[W+R]RO[16]TC[3]TM[60]TT[20]WR[9p];B[qd];W[pp];B[cd];W[dp];B[ic];W[od];B[oc];W[pd];B[pc];W[qe];B[nd];W[qc];B[rd];W[qb];B[re];W[qf];B[pb];W[nc];B[nb];W[mc];B[ne];W[of];B[rb];W[mb];B[qa];W[nf];B[ld];W[jc];B[id];W[jd];B[mf];W[mg];B[lf];W[ie];B[lg];W[ib];B[hb];W[jb];B[mh];W[ec];B[gd];W[gc];B[fd];W[gb];B[pi];W[ni];B[nh];W[qj];B[qi];W[ri];B[rh];W[rj];B[qh];W[qn];B[fq];W[cn];B[dr];W[hq];B[hp];W[ip];B[gp];W[de];B[dd];W[ed];B[ee];W[ce];B[be];W[bd];B[db];W[bc];B[cb];W[ef];B[bf];W[cg];B[fe];W[eb];B[bb];W[bg];B[cc];W[cf];B[ac];W[hg];B[pl];W[qm];B[cl];W[cq];B[iq];W[jq];B[ir];W[jp];B[hr];W[cj];B[ek];W[nq];B[pq];W[oq];B[qp];W[qq];B[po];W[pr];B[rk];W[qk];B[qo];W[on];B[oo];W[om];B[no];W[mn];B[mp];W[lr];B[lq];W[kr];B[nn];W[nm];B[mm];W[ml];B[lm];W[ln];B[kn];W[km];B[ll];W[ko])` },
+  { id:"game17", title:"第17局 Master vs Lian Xiao",   black:"Lian Xiao",     white:"Master",         date:"2016-12-30", level:"上級",
+    sgf:`(;BR[7p]DT[2016-12-30 14:45:18]KM[6.5]PB[Lian Xiao]PC[Tygem]PW[Master]RE[W+6.5]RO[17]TC[3]TM[60]TT[20]WR[9p];B[qe];W[pp];B[pc];W[dc];B[cp];W[eq];B[ce];W[cd];B[de];W[fc];B[do];W[ci];B[ck];W[dk];B[cl];W[fe];B[ff];W[ge];B[ei];W[dj];B[fp];W[dl];B[cm];W[gk];B[gi];W[ik];B[ch];W[cq];B[bq];W[br];B[cr];W[dq];B[bs];W[gq];B[nq];W[lq];B[no];W[qn];B[iq];W[ar];B[aq];W[eo];B[kp];W[gp];B[as];W[dn];B[cn];W[jr];B[lp];W[ir];B[dm];W[oc];B[od];W[nc];B[pb];W[nd];B[oe];W[kd];B[qq];W[pq];B[pr];W[or];B[qr];W[nr];B[ro];W[mq];B[rn];W[bh];B[dh];W[bg];B[be];W[fh];B[el];W[ek];B[fg];W[gh];B[hh];W[ef];B[df];W[gg];B[fi];W[fl];B[ii];W[ig];B[ki];W[kk];B[nm];W[mk];B[hg];W[hf];B[eg];W[gf];B[bc];W[cc];B[bb];W[bd];B[ad];W[ok];B[pn];W[mf];B[cb];W[db];B[kg];W[jf];B[ma];W[mb];B[qi];W[pi];B[ph];W[qj];B[oi];W[pj];B[qh];W[ee];B[mi];W[lm];B[na];W[la];B[ob];W[nb];B[oa];W[lb];B[kn];W[km];B[ml];W[nl];B[mm];W[ll];B[lj];W[lk];B[fo];W[ln];B[mp];W[oq];B[qm];W[fq];B[em];W[om];B[fm];W[gm];B[gn];W[hm];B[kq];W[kr];B[da];W[ea];B[ca];W[eb];B[bj];W[bi];B[fs];W[hn];B[oo];W[ih];B[ij];W[hi];B[hj];W[nn];B[hk];W[il];B[lf];W[mg];B[jh];W[le])` },
+  { id:"game18", title:"第18局 Master vs Ke Jie",      black:"Master",        white:"Ke Jie",         date:"2016-12-30", level:"上級",
+    sgf:`(;BR[9p]DT[2016-12-30 16:15:35]KM[6.5]PB[Master]PC[Tygem]PW[Ke Jie]RE[B+5.5]RO[18]TC[3]TM[60]TT[20]WR[9p];B[pd];W[pp];B[dc];W[dp];B[df];W[cn];B[dm];W[cm];B[jd];W[qf];B[nd];W[qc];B[qd];W[rd];B[dk];W[rb];B[cl];W[ng];B[nq];W[qn];B[gq];W[kp];B[dr];W[cq];B[go];W[el];B[dl];W[pq];B[cr];W[dn];B[em];W[fp];B[gp];W[km];B[bq];W[bp];B[dq];W[cp];B[br];W[bl];B[bk];W[al];B[pm];W[qm];B[mn];W[mm];B[nm];W[nn];B[mo];W[no];B[lm];W[ml];B[ll];W[ln];B[lo];W[kn];B[lq];W[mk];B[lk];W[mj];B[np];W[pn];B[jk];W[ki];B[jl];W[ld];B[pf];W[qe];B[lf];W[me];B[lh];W[kq];B[lr];W[lj];B[mf];W[nf];B[ne];W[ke];B[jg];W[je];B[nh];W[pg];B[lc];W[mc];B[md];W[kc];B[lb];W[le];B[kb];W[jc];B[jb];W[ic];B[if];W[ib];B[nc];W[ii];B[gc];W[he];B[ie];W[id];B[gd];W[in];B[or];W[hl];B[gg];W[hj];B[mg];W[oh];B[gk];W[hk];B[ni];W[oj];B[fh];W[cc];B[cb];W[db];B[eb];W[cj];B[bm];W[bn];B[cg];W[kr];B[mr];W[ei];B[fi];W[ej];B[ci];W[fj];B[dj];W[dh];B[ch];W[ob];B[nb];W[oc];B[ja];W[pr];B[ps];W[qs];B[os];W[qr];B[iq];W[ip];B[nj];W[ok];B[gj];W[fl];B[hh];W[ih];B[ig];W[hr];B[gr];W[ir];B[hq];W[ak];B[aj];W[am];B[bj];W[jq];B[hn];W[hm];B[jo];W[ko];B[io];W[jn];B[pe];W[oi];B[hs];W[is];B[gs];W[ks];B[jh];W[ji];B[oa];W[eh];B[eg];W[pb];B[oo];W[on];B[op];W[pa];B[na];W[fq];B[fr];W[eq];B[er];W[fo];B[en];W[eo];B[po];W[qo];B[lp];W[gi];B[hi];W[dg];B[ef];W[kh];B[kg];W[nk];B[im];W[li];B[mh];W[gl];B[gh];W[aq];B[ar];W[ap];B[an];W[ao];B[ls];W[jp];B[ho];W[jm];B[ij];W[il];B[jr];W[js];B[of];W[og];B[od];W[fn];B[fm];W[gm];B[gn];W[di];B[ck];W[fk];B[gi];W[kk])` },
+  { id:"game19", title:"第19局 Master vs Ke Jie",      black:"Ke Jie",        white:"Master",         date:"2016-12-30", level:"上級",
+    sgf:`(;BR[9p]DT[2016-12-30 16:48:03]KM[6.5]PB[Ke Jie]PC[Tygem]PW[Master]RE[W+R]RO[19]TC[3]TM[60]TT[20]WR[9p];B[pd];W[dd];B[qp];W[dq];B[co];W[oq];B[lp];W[ck];B[hq];W[cp];B[ep];W[do];B[dp];W[cn];B[cq];W[bo];B[bp];W[co];B[eq];W[bq];B[dr];W[mp];B[pn];W[lo];B[kp];W[mq];B[pq];W[nc];B[qf];W[pr];B[fc];W[rq];B[oc];W[ql];B[pi];W[om];B[no];W[mo];B[nn];W[op];B[qr];W[qq];B[pp];W[rr];B[pm];W[pl];B[ol];W[pj];B[nl];W[qi];B[oj];W[mm];B[nm];W[ph];B[oi];W[qg];B[pf];W[ec];B[fd];W[jc];B[de];W[ce];B[df];W[cf];B[cd];W[cc];B[bd];W[bc];B[ed];W[dc];B[cg];W[be];B[lc];W[ob];B[pb];W[hc];B[he];W[ie];B[if];W[je];B[hd];W[ld];B[mc];W[nd];B[md];W[me];B[ne];W[oe];B[nf];W[od];B[pc];W[mb];B[le];W[mf];B[lb];W[of];B[ng];W[og];B[kf];W[lg];B[kd];W[nh];B[kg];W[rd];B[re];W[rg];B[rc];W[dg];B[eg];W[dh];B[eh];W[di];B[ei];W[ej];B[fj];W[ek];B[qj];W[rj];B[pk];W[rk];B[fb];W[fk];B[gj];W[kr];B[br];W[ir];B[jq];W[jr])` },
+  { id:"game20", title:"第20局 Master vs Park Jung-hwan", black:"Master",     white:"Park Jung-hwan", date:"2016-12-30", level:"上級",
+    sgf:`(;BR[9p]DT[2016-12-30 17:14:02]KM[6.5]PB[Master]PC[Tygem]PW[Park Jung-hwan]RE[B+5.5]RO[20]TC[3]TM[60]TT[20]WR[9p];B[pd];W[dd];B[pq];W[dp];B[fq];W[cn];B[qk];W[nc];B[pf];W[qc];B[pc];W[pb];B[mp];W[rb];B[fo];W[dk];B[em];W[dm];B[el];W[jo];B[lm];W[jm];B[kk];W[jq];B[kp];W[jp];B[il];W[lr];B[mr];W[lo];B[mo];W[mq];B[lq];W[nq];B[kr];W[lp];B[kq];W[ln];B[mn];W[nr];B[ls];W[mm];B[km];W[kn];B[np];W[jl];B[jk];W[op];B[oo];W[gp];B[fp];W[pp];B[oq];W[nn];B[no];W[ml];B[lk];W[po];B[on];W[pm];B[or];W[pk];B[pj];W[qj];B[ql];W[pl];B[qi];W[rj];B[ri];W[oj];B[pi];W[gq];B[hn];W[fr];B[er];W[hr];B[dq];W[go];B[gn];W[fs];B[cf];W[ch];B[cc];W[cd];B[dc];W[ed];B[bd];W[be];B[bc];W[ce];B[fc];W[ek];B[ef];W[bf];B[gj];W[rm];B[rk];W[pn];B[nm];W[qq];B[qr];W[rq];B[qm];W[rn];B[ei];W[di];B[mc];W[md];B[lc];W[nb];B[ld];W[ge];B[rd];W[gc];B[fb];W[gh];B[gd];W[he];B[fd];W[fe];B[gi];W[eh];B[hd];W[cq];B[cr];W[bq];B[hh];W[gg];B[rc];W[nd];B[qd];W[qb];B[do];W[co];B[lf];W[sb];B[fk];W[en];B[fn];W[je];B[id];W[ih];B[hg];W[ig];B[hi];W[ie];B[mb];W[im];B[hl];W[fl];B[fm];W[fj];B[gl];W[fi];B[rr];W[nl];B[br];W[kd];B[kc];W[sr];B[aq];W[ap];B[ar];W[cp];B[oi];W[nj];B[qn];W[qo];B[me];W[ne];B[nf];W[ng];B[of];W[ni];B[jr];W[ir];B[eo];W[dn];B[dl];W[cl];B[ji];W[es];B[ds];W[om];B[ns];W[hf];B[nh];W[mh];B[oh];W[mg];B[mk];W[nk];B[li];W[ec];B[eb];W[ep];B[eq];W[kh];B[jh];W[jg];B[kg];W[mi];B[lh];W[kf];B[lg];W[jd];B[jc];W[sl];B[sj];W[rl];B[ii];W[sc];B[sd];W[oe];B[pe];W[og];B[pg];W[mj];B[lj];W[ma];B[la];W[na];B[is];W[hs];B[js];W[ad];B[ac];W[ae];B[oc];W[ob];B[io];W[ip];B[ho];W[hp];B[hm];W[rs];B[qs];W[ke];B[ss];W[sq];B[nn];W[rs];B[kl];W[jn];B[ss];W[le];B[mf];W[rs];B[ao];W[bp];B[ss];W[gk];B[hk];W[ko];B[rs])` },
+
+  // ===== 三連星（5局） =====
+  { id:"game21", title:"三連星 松本武久 vs 柳時熏",      black:"松本武久",  white:"柳時熏",    date:"2014-10-09", level:"中級",
+    sgf:`(;GM[1]FF[4]SZ[19]GN[第40期碁聖戦予選]PB[松本武久]BR[七段]PW[柳時熏]WR[九段]KM[6.5]RE[B+R]DT[2014-10-09];B[pd];W[dd];B[pp];W[dp];B[pj];W[nc];B[nq];W[qf];B[nd];W[md];B[ne];W[pc];B[qc];W[oc];B[qd];W[lc];B[pg];W[fd];B[dj];W[lf];B[cn];W[fq];B[cf];W[jp];B[cc];W[cd];B[bd];W[dc];B[bb];W[cb];B[bc];W[eg];B[dh];W[qh];B[ph];W[qj];B[qg];W[pk];B[oj];W[ri];B[rg];W[qn];B[jf];W[jd];B[qo];W[rn];B[ro];W[on];B[cq];W[cp];B[bp];W[bo];B[bq];W[co];B[er];W[fr];B[eq];W[ep];B[dq];W[dn];B[lq];W[kq];B[lp];W[cl];B[iq];W[kr];B[fp];W[gp];B[ip];W[hr];B[fo];W[go];B[fn];W[gn];B[fm];W[gm];B[fl];W[ek];B[dk];W[dl];B[ir];W[jo];B[io];W[jn];B[in];W[jm];B[gl];W[hm];B[im];W[il];B[fs];W[gq];B[hl];W[gs];B[es];W[ik];B[is];W[js];B[fj];W[bj];B[hs];W[gr];B[pm];W[pn];B[qk];W[rk];B[ql];W[rl];B[gd];W[ge];B[he];W[gf];B[ii];W[hj];B[jl];W[hi];B[jk];W[lm];B[ll];W[ml];B[hh];W[gi];B[bi];W[ci];B[bk];W[bh];B[ck];W[el];B[ij];W[hk];B[ej];W[ih];B[bn];W[jh];B[ch];W[eh];B[ei];W[db];B[ce];W[mj];B[mr];W[so];B[sp];W[sn];B[rp];W[op];B[oq];W[mh];B[ok];W[qb];B[rb];W[pb];B[rh];W[qi];B[ni];W[mi];B[me];W[le];B[ra];W[ng];B[og];W[po];B[qq];W[dg];B[cg];W[fh];B[ef];W[df];B[de];W[ee];B[mm];W[ln];B[mk];W[nl];B[nk];W[lk];B[kl];W[jj];B[fk];W[km];B[nm];W[kk];B[ol];W[ll];B[si];W[sj];B[sh];W[qm];B[pl];W[nf];B[of];W[ba];B[mo])` },
+  { id:"game22", title:"三連星 大橋拓文 vs 依田紀基",    black:"大橋拓文",  white:"依田紀基",  date:"2017-06-22", level:"中級",
+    sgf:`(;GM[1]SZ[19]PB[大橋拓文]PW[依田紀基]DT[2017/6/22]RE[W+R]KM[6.5]EV[第73期本因坊戦　最終予選1回戦];B[pd];W[dd];B[pp];W[dp];B[pj];W[nc];B[cq];W[cp];B[dq];W[eq];B[er];W[fq];B[fr];W[gq];B[dj];W[bp];B[gr];W[hq];B[bq];W[cl];B[cf];W[qc];B[qd];W[pc];B[od];W[nd];B[ne];W[me];B[mf];W[nf];B[oe];W[le];B[lf];W[ke];B[ng];W[ql];B[cc];W[dc];B[cd];W[de];B[ce];W[kf];B[oc];W[ob];B[nb];W[mb];B[pb];W[na];B[qb];W[rc];B[rb];W[rd];B[re];W[qe];B[sc];W[of];B[sd];W[og];B[nh];W[lh];B[mg];W[oi];B[oh];W[pi];B[ph];W[df];B[dg];W[eg];B[ig];W[dh];B[cg];W[fh];B[kg];W[qi];B[he];W[ch];B[hj];W[hh];B[hg];W[hi];B[ei];W[eh];B[dl];W[ck];B[ji];W[ij];B[hk];W[ii];B[dm];W[cm];B[eo];W[dk];B[ek];W[el];B[em];W[fl];B[gm];W[fj];B[ip];W[ep];B[fm];W[fk];B[jl];W[jn];B[ho];W[nq];B[oq];W[np];B[qn];W[jh];B[jg];W[kh];B[ic];W[po];B[qo];W[qq];B[qp];W[or];B[pr];W[pq];B[qr];W[op];B[rq];W[kp];B[im];W[jr];B[ll];W[qg];B[pg];W[ln];B[ff];W[cb];B[bb];W[eb];B[ca];W[ef];B[qh];W[rh];B[rg];W[lg];B[kb];W[kc];B[jc];W[lb];B[kd];W[lc];B[gc];W[ik];B[mj];W[ni];B[nl];W[da];B[db];W[in];B[hn];W[jd];B[id];W[je];B[jf];W[if];B[gg];W[gd];B[fd];W[fe];B[ee];W[ed];B[hc];W[ld];B[mi];W[pm];B[pn];W[om];B[nn];W[on];B[oo];W[no];B[nm];W[kj];B[rj];W[qj];B[rk];W[qk];B[fc];W[kk];B[mh];W[cn];B[ko];W[lo];B[jp];W[kq];B[ir];W[fp];B[fn])` },
+  { id:"game23", title:"三連星 大淵盛人 vs 柳時熏",      black:"大淵盛人",  white:"柳時熏",    date:"2013-12-05", level:"中級",
+    sgf:`(;GM[1]FF[4]SZ[19]PB[大淵盛人]BR[九段]PW[柳時熏]WR[九段]KM[6.5]RE[W+R]DT[2013-12-05]GN[第39期棋聖戦予選];B[pd];W[dd];B[pp];W[dp];B[pj];W[nc];B[jp];W[qf];B[nd];W[md];B[ne];W[pc];B[oc];W[ob];B[od];W[mb];B[qc];W[pb];B[me];W[ld];B[fq];W[kf];B[cn];W[fp];B[gp];W[fo];B[eq];W[dn];B[dm];W[co];B[bn];W[dq];B[bo];W[dr];B[cf];W[fc];B[di];W[pi];B[qj];W[oi];B[oj];W[ni];B[pg];W[qg];B[qi];W[pf];B[of];W[og];B[ng];W[ph];B[lg];W[lf];B[mf];W[rd];B[qd];W[rc];B[kg];W[jg];B[jf];W[jh];B[if];W[jd];B[ki];W[hg];B[ef];W[hf];B[qo];W[ce];B[bf];W[oq];B[pq];W[lq];B[or];W[lo];B[kq];W[mk];B[lm];W[mh];B[mg];W[jo];B[ip];W[kp];B[kr];W[kk];B[lj];W[lk];B[nm];W[km];B[kn];W[ln];B[jm];W[kl];B[jn];W[mm];B[bq];W[go];B[hp];W[gl];B[fm];W[gm];B[hn];W[gn];B[ik];W[il];B[gj];W[fl];B[el];W[im];B[in];W[fj];B[fi];W[ej];B[ei];W[gi];B[hj];W[ek];B[jl];W[cl];B[cm];W[cj];B[ci];W[jk];B[jj];W[bl];B[cp];W[do];B[br];W[bj];B[bi];W[bs];B[cs];W[cr];B[as];W[bm];B[an];W[gr];B[gq];W[en];B[em];W[ep];B[fe];W[gd];B[ec];W[ed];B[fd];W[gc];B[dc];W[cc];B[cb];W[bb];B[bc];W[cd];B[ba];W[db];B[ab];W[eb];B[nn];W[gh];B[pe];W[lr];B[mp];W[lp];B[ir];W[nk];B[ok];W[nl];B[ol];W[rh];B[ri];W[ad];B[am];W[dj];B[al];W[bk];B[fh];W[ae];B[ac];W[af];B[bg];W[fg];B[eg];W[dh])` },
+  { id:"game24", title:"三連星 武宮正樹 vs 山田規三生",  black:"武宮正樹",  white:"山田規三生", date:"2013-08-29", level:"上級",
+    sgf:`(;GM[1]FF[4]SZ[19]PB[武宮正樹]BR[九段]PW[山田規三生]WR[九段]KM[6.5]RE[W+2.5]DT[2013-08-29]GN[第39期名人戦予選];B[pd];W[dd];B[pp];W[dp];B[pj];W[nc];B[lc];W[qc];B[qd];W[pc];B[od];W[nd];B[oc];W[ob];B[pb];W[qb];B[nb];W[pa];B[ne];W[mb];B[md];W[na];B[mf];W[nq];B[oo];W[fq];B[mp];W[qq];B[qp];W[pq];B[mq];W[nr];B[np];W[dj];B[ij];W[il];B[gj];W[gl];B[kk];W[fd];B[ek];W[dk];B[fm];W[dl];B[fl];W[ho];B[gk];W[le];B[mc];W[nb];B[me];W[qg];B[dm];W[cm];B[gp];W[go];B[dn];W[fp];B[cn];W[dg];B[qi];W[rd];B[re];W[qe];B[pe];W[rf];B[qf];W[se];B[pg];W[pf];B[rq];W[he];B[hc];W[cc];B[cd];W[bd];B[be];W[bb];B[db];W[dc];B[eb];W[ce];B[de];W[cf];B[bf];W[cg];B[bg];W[ch];B[bh];W[ci];B[bi];W[cj];B[bk];W[cl];B[ec];W[fc];B[bk];W[df];B[bm];W[bl];B[al];W[di];B[bo];W[dh];B[ak];W[aj];B[am];W[ad];B[cq];W[cp];B[bp];W[cr];B[bq];W[iq];B[rp];W[hg];B[ig];W[km];B[mr];W[oq];B[jn];W[jm];B[in];W[hn];B[jp];W[hm];B[ip];W[hp];B[lm];W[ih];B[jh];W[ln];B[ll];W[kn];B[jq];W[ir];B[sq];W[sr];B[sp];W[rs];B[mn];W[qh];B[ph];W[ri];B[rj];W[rg];B[si];W[if];B[jg];W[hf];B[dr];W[jf];B[kf];W[ke];B[lf];W[kc];B[jr];W[er];B[dq];W[ds];B[kd];W[jd];B[ld];W[je];B[kb];W[jc];B[lb];W[ii];B[ji];W[fi];B[gi];W[gh];B[re];W[rc];B[ib];W[jb];B[ja];W[hb];B[rh];W[ej];B[lo];W[gr];B[br];W[cs];B[bs];W[es];B[fk];W[ha];B[ia];W[ms];B[ls];W[ns];B[ik];W[hh];B[fo];W[ic];B[ka];W[fo];B[hk];W[im];B[kl];W[jl];B[jk];W[hi];B[op];W[sd];B[sh])` },
+  { id:"game25", title:"三連星 山城宏 vs 小林光一",      black:"山城宏",    white:"小林光一",  date:"2014-05-08", level:"上級",
+    sgf:`(;GM[1]FF[4]SZ[19]GN[第4回フマキラー囲碁マスターズカップ2回戦]PB[山城宏]BR[九段]PW[小林光一]WR[九段]KM[6.5]RE[W+R]DT[2014-05-08];B[pd];W[dd];B[pp];W[dp];B[pj];W[nc];B[fq];W[cn];B[dm];W[cm];B[lq];W[qf];B[oe];W[qc];B[qd];W[pc];B[md];W[od];B[pe];W[rd];B[re];W[rc];B[pg];W[qp];B[qq];W[qo];B[pq];W[ql];B[po];W[rj];B[qn];W[rn];B[ro];W[qg];B[nd];W[oc];B[ph];W[qm];B[rp];W[qi];B[ok];W[ip];B[fo];W[kp];B[jr];W[lp];B[hq];W[kq];B[kr];W[mq];B[lr];W[iq];B[ir];W[kl];B[cq];W[cj];B[cp];W[ng];B[pf];W[jd];B[lg];W[ni];B[pi];W[nk];B[nl];W[mk];B[nf];W[mg];B[mf];W[lh];B[kh];W[kg];B[lf];W[li];B[cc];W[dc];B[cd];W[ce];B[be];W[bf];B[cf];W[de];B[bg];W[bd];B[af];W[bc];B[df];W[dn];B[rm];W[rl];B[sn];W[qh];B[qe];W[rf];B[hc];W[fe];B[di];W[dj];B[ei];W[bi];B[ef];W[gd];B[jb];W[kb];B[kc];W[jc];B[lb];W[ib];B[ka];W[hb];B[ee];W[ed];B[mp];W[mo];B[np];W[gg];B[ej];W[eo];B[dq];W[fn];B[go];W[ek];B[fk];W[el];B[ic];W[gc];B[je];W[ie];B[jg];W[ch];B[ff];W[gf];B[gj];W[ki];B[jh];W[ke];B[ia];W[id];B[ha];W[gb];B[kf];W[bo];B[ln];W[kn];B[lm];W[km];B[lo];W[ll];B[oa];W[se];B[ep];W[mm];B[mn];W[nn];B[no];W[ko];B[mo];W[bp];B[bq];W[fh];B[dh];W[fi];B[fj];W[ij];B[pa];W[cg];B[dg];W[gl];B[ii];W[hi];B[hj];W[hh])` },
+  { id:"game21b", title:"三連星 本木克弥 vs 柳時熏",     black:"本木克弥",  white:"柳時熏",    date:"2013-11-21", level:"中級",
+    sgf:`(;GM[1]FF[4]SZ[19]PB[本木克弥]BR[二段]PW[柳時熏]WR[九段]KM[6.5]RE[W+R]DT[2013-11-21]GN[第39期棋聖戦予選];B[pd];W[dd];B[pp];W[dp];B[pj];W[nc];B[pf];W[nq];B[oc];W[jd];B[nd];W[qn];B[np];W[mp];B[no];W[pq];B[oq];W[or];B[op];W[mr];B[qq];W[pr];B[mo];W[lp];B[fc];W[hc];B[cf];W[df];B[de];W[ce];B[ee];W[cd];B[dg];W[ed];B[fd];W[ef];B[fe];W[cg];B[bf];W[eg];B[bg];W[dh];B[ci];W[cb];B[hd];W[hg];B[id];W[ic];B[je];W[kd];B[hf];W[mc];B[ig];W[ih];B[gg];W[hh];B[gh];W[di];B[cj];W[gi];B[cm];W[if];B[gf];W[jg];B[fi];W[dj];B[ck];W[gj];B[fj];W[dk];B[fk];W[dl];B[bn];W[dm];B[dn];W[en];B[gk];W[do];B[cn];W[fm];B[ij];W[hi];B[ie];W[hk];B[hl];W[gl];B[hj];W[ik];B[jj];W[il];B[eh];W[lf];B[gc];W[pk];B[ok];W[qj];B[qi];W[qk];B[pi];W[ol];B[pm];W[nk];B[oj];W[pl];B[qm];W[ml];B[nm];W[nl];B[li];W[ri];B[rh];W[ro];B[rm];W[qp];B[rq];W[lk];B[rp];W[qo];B[pn];W[kj];B[kn];W[kl];B[jo];W[rr];B[po];W[qr];B[rn];W[bp];B[be];W[bd];B[fr];W[cl];B[bl];W[dr];B[ke];W[jb];B[iq];W[gq];B[gr];W[sq];B[so];W[md];B[nb];W[mb];B[hb];W[eb];B[ec];W[fb];B[dc];W[db];B[ib];W[jc];B[gb];W[ae];B[ch];W[ob];B[pb];W[na];B[ne];W[rj];B[qg];W[pa];B[qa];W[mg];B[mh];W[kg];B[kh];W[jf];B[ia];W[ki];B[oa];W[ga])` },
+
+  // ===== 二連星（14局） =====
+  { id:"game26", title:"二連星 吉原由香里 vs 小林覚",    black:"吉原由香里", white:"小林覚",   date:"2026-03-05", level:"初級",
+    sgf:`(;GM[1]FF[4]SZ[19]PB[吉原由香里]BR[六段]PW[小林覚]WR[九段]KM[6.5]RE[W+3.5]DT[2026-03-05]GN[第5回テイケイグループ杯レジェンド戦2回戦];B[pd];W[dd];B[pp];W[dp];B[fq];W[nc];B[qf];W[hq];B[cq];W[dq];B[cp];W[do];B[dr];W[er];B[cr];W[fr];B[cn];W[fc];B[qn];W[kd];B[jq];W[nq];B[oq];W[np];B[lq];W[mo];B[jo];W[ho];B[ln];W[nm];B[pl];W[lo];B[kn];W[ml];B[kl];W[nr];B[pr];W[lj];B[jj];W[oj];B[cf];W[em];B[hn];W[gn];B[hm];W[gm];B[hl];W[qq];B[qp];W[ce];B[df];W[di];B[ed];W[ec];B[cc];W[de];B[be];W[bd];B[bg];W[ee];B[je];W[ke];B[jf];W[ic];B[pj];W[pi];B[ok];W[qj];B[pk];W[nj];B[nk];W[kp];B[jp];W[or];B[qr];W[oh];B[mk];W[kq];B[kr];W[lr];B[ir];W[ls];B[nd];W[oc];B[pc];W[rg];B[rf];W[qg];B[pg];W[od];B[oe];W[ph];B[md];W[lb];B[bc];W[ae];B[af];W[bf];B[ks];W[lp];B[be];W[pb];B[qb];W[bf];B[mq];W[mr];B[be];W[pe];B[pf];W[bf];B[mh];W[rl];B[be];W[qc];B[qd];W[bf];B[ri];W[rh];B[be];W[ne];B[qe];W[bf];B[sg];W[sh];B[be];W[qa];B[rb];W[bf];B[rm];W[rj];B[be];W[cl];B[ad];W[bo];B[co];W[bn];B[dn];W[en];B[bp];W[cm];B[gr];W[gq];B[hr];W[eq];B[fp];W[ds];B[cs];W[fo];B[ar];W[bi];B[me];W[ob];B[hd];W[id];B[he];W[hc];B[kf];W[mj];B[fi];W[ra];B[rc];W[fk];B[gj];W[gk];B[hk];W[gf];B[hf];W[gh];B[fh];W[fg];B[hh];W[ki];B[ng];W[op];B[pq];W[io];B[in];W[ql];B[qm];W[ei];B[ch];W[ci];B[sl];W[qi];B[db];W[eb];B[dc];W[fd];B[jd];W[jc];B[gi];W[gg];B[jh];W[kh];B[kg];W[lh];B[lg];W[hg];B[ig];W[hi];B[ih];W[eh];B[hj];W[sf];B[se];W[sk];B[sm];W[om];B[qk];W[rk];B[oo];W[po];B[pn];W[on];B[qo];W[kk];B[jk];W[ll];B[pm];W[km];B[jl];W[lm];B[jm];W[mn];B[le];W[lc];B[lk];W[kj];B[nl];W[mm];B[ef];W[fe];B[ip];W[gp];B[fj];W[ej];B[bh];W[ah];B[mc];W[mb];B[ea];W[fa];B[da];W[no];B[ld];W[kc];B[cd];W[of];B[nf];W[gs];B[hs];W[bm];B[dm];W[dl];B[gl];W[fl];B[ni];W[oi];B[os];W[ns];B[ps];W[ji];B[ii];W[ie];B[if];W[ko];B[jn];W[nh];B[mi];W[gd];B[eg];W[ap];B[aq];W[ao];B[og];W[dh];B[dg];W[sb];B[sc];W[pa];B[sg];W[es];B[sf];W[sa];B[po];W[fs];B[hp];W[go])` },
+  { id:"game27", title:"二連星 金恩持 vs 李昌鎬",        black:"金恩持",    white:"李昌鎬",    date:"2026-02-09", level:"初級",
+    sgf:`(;GM[1]FF[4]SZ[19]PB[金恩持]BR[九段]PW[李昌鎬]WR[九段]KM[6.5]RE[B+R]DT[2026-02-09]GN[2026レジェンドvs女子囲碁リーグオールスター戦第2戦];B[pd];W[dd];B[pp];W[dp];B[cq];W[dq];B[cp];W[do];B[bn];W[jq];B[qf];W[nq];B[pn];W[fc];B[cm];W[nc];B[lq];W[hp];B[lo];W[pc];B[qc];W[qb];B[oc];W[pb];B[nd];W[ob];B[od];W[mc];B[qq];W[lr];B[mr];W[mq];B[kr];W[lp];B[kq];W[kp];B[jr];W[jp];B[mp];W[ir];B[np];W[le];B[pi];W[cf];B[gd];W[gc];B[id];W[if];B[hc];W[he];B[hd];W[ff];B[kc];W[lb];B[jf];W[je];B[ie];W[kf];B[hf];W[jg];B[gf];W[fg];B[gh];W[gg];B[hg];W[hh];B[ih];W[hi];B[ig];W[jj];B[kb];W[ck];B[dk];W[dl];B[cl];W[cj];B[dj];W[dm];B[ii];W[ij];B[hj];W[gi];B[fi];W[gj];B[ci];W[bi];B[bh];W[ch];B[di];W[bg];B[bj];W[ah];B[bk];W[rc];B[qd];W[pk];B[nj];W[qi];B[qj];W[pj];B[qk];W[oq];B[ls];W[oi];B[ph];W[ql];B[rl];W[oh];B[pg];W[nn];B[pl];W[op];B[oo];W[no];B[mo];W[on];B[po];W[kn];B[iq];W[ol];B[pm];W[mn];B[hr];W[hq];B[is];W[co];B[bo];W[oj];B[mh];W[ng];B[mg];W[nf];B[om];W[nl];B[mf];W[me];B[nm];W[mm];B[ml];W[ne];B[mk];W[ok];B[ji];W[ki];B[kj];W[kk];B[lj];W[kh];B[hk];W[rk];B[rj];W[ri];B[sk];W[jk];B[km];W[ln];B[jl];W[sj];B[si])` },
+  { id:"game28", title:"二連星 芝野虎丸 vs 一力遼",      black:"芝野虎丸",  white:"一力遼",    date:"2025-10-15", level:"初級",
+    sgf:`(;GM[1]FF[4]SZ[19]PB[芝野虎丸]BR[九段]PW[一力遼]WR[九段]KM[6.5]RE[W+R]DT[2025-10-15]GN[第50期名人戦挑戦手合七番勝負第6局];B[pd];W[dd];B[pp];W[dp];B[nq];W[qc];B[qd];W[pc];B[nc];W[oc];B[od];W[nb];B[pk];W[gq];B[mc];W[mb];B[lc];W[dj];B[mj];W[mp];B[fo];W[hp];B[cl];W[co];B[cf];W[ci];B[dn];W[el];B[ho];W[ep];B[io];W[jp];B[cn];W[gl];B[fm];W[fl];B[fj];W[dl];B[ck];W[ej];B[ee];W[de];B[df];W[ef];B[eg];W[ff];B[fg];W[gf];B[gg];W[hf];B[hg];W[if];B[dk];W[ek];B[bo];W[bp];B[do];W[cp];B[hm];W[hl];B[bd];W[im];B[cc];W[gn];B[gm];W[go];B[fn];W[hn];B[bj];W[bi];B[bm];W[dg];B[bf];W[ao];B[an];W[bn];B[in];W[gp];B[bo];W[dh];B[ap];W[jh];B[fd];W[fc];B[jj];W[ij];B[gc];W[gd];B[hd];W[ge];B[lg];W[rk];B[ji];W[ih];B[ii];W[hi];B[hj];W[gi];B[ql];W[rl];B[qn];W[qk];B[pl];W[qh];B[qj];W[rj];B[qi];W[ri];B[rg];W[rh];B[rc];W[rb];B[re];W[rn];B[rm];W[sm];B[qm];W[oh];B[pg];W[ph];B[oj];W[mh];B[lh];W[mg];B[lf];W[mi];B[li];W[ro];B[rq];W[nf];B[mq];W[fb];B[ik];W[bq];B[il];W[lq];B[lr];W[lp];B[kr];W[jm];B[iq];W[ip];B[kn];W[km];B[ln];W[lm];B[mn];W[jn];B[sb];W[lb];B[fi];W[fh];B[jf];W[kc])` },
+  { id:"game29", title:"二連星 西村仁 vs 関山利道",      black:"西村仁",    white:"関山利道",  date:"2025-09-11", level:"初級",
+    sgf:`(;GM[1]FF[4]SZ[19]PB[西村仁]BR[二段]PW[関山利道]WR[九段]KM[6.5]RE[B+12.5]DT[2025-09-11]GN[第52期天元戦予選];B[pd];W[dd];B[pp];W[dp];B[cq];W[dq];B[cp];W[do];B[cn];W[nc];B[bm];W[qf];B[nd];W[md];B[ne];W[pc];B[mc];W[oc];B[ld];W[qd];B[fc];W[dn];B[me];W[cm];B[co];W[cl];B[bl];W[ck];B[cc];W[dc];B[cd];W[de];B[db];W[eb];B[cb];W[fb];B[gc];W[ic];B[gb];W[ec];B[cf];W[kc];B[df];W[ef];B[ge];W[fe];B[gf];W[dg];B[cg];W[ie];B[eg];W[fg];B[dh];W[ff];B[hg];W[fi];B[jf];W[gd];B[je];W[hd];B[kq];W[if];B[qc];W[od];B[pe];W[oe];B[pf];W[of];B[pg];W[og];B[kh];W[ph];B[qg];W[rd];B[qh];W[pi];B[qi];W[pj];B[rb];W[rc];B[qb];W[sb];B[re];W[pb];B[qe];W[qa];B[qk];W[qq];B[pq];W[qp];B[qo];W[ro];B[rn];W[qn];B[po];W[rm];B[rp];W[sn];B[rq];W[qj];B[rj];W[rk];B[rl];W[ql];B[sk];W[pk];B[ig];W[iq];B[ip];W[hp];B[jp];W[ho];B[hq];W[gq];B[hr];W[ir];B[pl];W[sd];B[gr];W[pr];B[or];W[oq];B[qs];W[fr];B[fq];W[hs];B[go];W[hn];B[gn];W[hm];B[gm];W[hl];B[fk];W[gk];B[fj];W[gj];B[em];W[fl];B[el];W[dj];B[ei];W[ej];B[ek];W[gl];B[fh];W[gi];B[fd];W[gh];B[gg];W[eh];B[fs];W[es];B[kd];W[ee];B[lf];W[mg];B[mf];W[ql];B[pn];W[ok];B[nl];W[nf];B[ng];W[le];B[ke];W[kf];B[lg];W[lc];B[kb];W[mh];B[mb];W[lh];B[cj];W[dk];B[bk];W[ci];B[bc];W[mq];B[rn];W[np];B[on];W[om];B[so];W[nn];B[kk];W[kl];B[jl];W[jm];B[bj];W[di];B[dm];W[mn];B[ll];W[km];B[lk];W[fm];B[bi];W[nr];B[mr];W[lr];B[cr];W[hb];B[ha];W[ia];B[ga];W[kj];B[lj];W[ji];B[jd];W[id];B[dr];W[lq];B[mm];W[nk];B[nj];W[oj];B[jk];W[ni];B[li];W[ki];B[ii];W[ij];B[jh];W[hi];B[ih];W[nh];B[jc];W[jb];B[mn];W[mo];B[mi];W[jj];B[ds];W[ks];B[mj];W[ms];B[ns];W[ls])` },
+  { id:"game30", title:"二連星 大淵浩太郎 vs 大西竜平",  black:"大淵浩太郎", white:"大西竜平", date:"2025-07-14", level:"初級",
+    sgf:`(;GM[1]FF[4]SZ[19]PB[大淵浩太郎]BR[五段]PW[大西竜平]WR[七段]KM[6.5]RE[W+R]DT[2025-07-14]GN[第51期碁聖戦予選];B[pd];W[dd];B[pp];W[dp];B[pk];W[qq];B[qp];W[pq];B[op];W[nq];B[np];W[oq];B[mp];W[fc];B[pi];W[fq];B[nd];W[jd];B[gd];W[gc];B[dj];W[cn];B[je];W[id];B[kd];W[kc];B[lc];W[qd];B[qc];W[rc];B[qe];W[rd];B[re];W[pc];B[qb];W[rb];B[pb];W[oc];B[ob];W[nc];B[od];W[ld];B[ke];W[mc];B[lb];W[md];B[me];W[ne];B[of];W[mb];B[kb];W[le];B[lf];W[mf];B[ma];W[na];B[la];W[nb];B[mg];W[lg];B[kf];W[ng];B[mh];W[nf];B[og];W[nh];B[ni];W[qa];B[jc];W[mi];B[lh];W[li];B[kh];W[ki];B[nj];W[jh];B[kg];W[cf];B[mq];W[rq];B[hp];W[hj];B[cm];W[dm];B[dl];W[em];B[bn];W[bm];B[cl];W[bo];B[fl];W[hl];B[fm];W[an];B[jl];W[im];B[fp];W[ep];B[cd];W[ce];B[gq];W[fr];B[dc];W[ec];B[hk];W[ik];B[gk];W[il];B[ij];W[jj];B[ii];W[hh];B[hi];W[gi];B[gj];W[ih];B[gh];W[fi];B[gg];W[ji];B[hj];W[ll];B[km];W[kl];B[cb];W[ee];B[jm];W[jk];B[eh];W[hg];B[bc];W[gf];B[ff];W[hf];B[fh];W[dh];B[ei];W[ro];B[jo];W[rm];B[rp];W[sp];B[rk];W[hr];B[fd];W[ed];B[ie];W[fe];B[hd];W[io];B[ip];W[jn];B[kn];W[in];B[mm];W[be];B[eb];W[bd];B[cc];W[fb];B[ea];W[ci];B[dg];W[cj];B[gn];W[ef];B[eg];W[fo];B[cg];W[bg];B[go];W[ge];B[gr];W[gs];B[ir];W[oh];B[ph];W[pa];B[oe];W[oa];B[nr];W[or];B[hq];W[mr];B[lr];W[ns];B[hs];W[fs])` },
+  { id:"game31", title:"二連星 仲邑菫 vs 呉政娥",        black:"仲邑菫",    white:"呉政娥",    date:"2025-06-25", level:"中級",
+    sgf:`(;GM[1]FF[4]SZ[19]PB[仲邑菫]BR[四段]PW[呉政娥]WR[五段]KM[6.5]RE[W+3.5]DT[2025-06-25]GN[第5回IBK企業銀行杯女子囲碁マスターズ2回戦];B[pd];W[dd];B[pp];W[dp];B[fq];W[cn];B[pn];W[nc];B[qf];W[fc];B[jp];W[pc];B[qc];W[qb];B[oc];W[pb];B[od];W[ob];B[me];W[qd];B[rc];W[rd];B[re];W[rb];B[pk];W[di];B[kj];W[pq];B[oq];W[qp];B[op];W[ro];B[rn];W[qn];B[qm];W[qo];B[rm];W[pr];B[or];W[os];B[ns];W[ps];B[qq];W[qr];B[cf];W[ce];B[df];W[ff];B[fe];W[ge];B[gf];W[ee];B[fg];W[fd];B[hf];W[fi];B[be];W[bd];B[bg];W[ch];B[ef];W[hj];B[de];W[cd];B[fe];W[jk];B[ed];W[ec];B[kk];W[jm];B[fo];W[kl];B[jj];W[ik];B[cq];W[dq];B[dr];W[fn];B[br];W[eo];B[go];W[gn];B[qe];W[sc];B[rq];W[rr];B[ll];W[lm];B[mm];W[ln];B[mc];W[se];B[sf];W[rg];B[sd];W[kh];B[jg];W[ji];B[mk];W[ii];B[lh];W[bp];B[kg];W[mn];B[bi];W[bh];B[ah];W[bj];B[ho];W[nm];B[po];W[sq];B[ml];W[kq];B[jq];W[jr];B[kp];W[lq];B[ir];W[no];B[lp];W[pl];B[qk];W[mq];B[mp];W[nr];B[im];W[hm];B[in];W[il];B[hc];W[hd];B[ic];W[id];B[jd];W[ok];B[nl];W[om];B[ol];W[pm];B[so];W[rp];B[np];W[li];B[ki];W[jh];B[mh];W[nd];B[ne];W[nb];B[ql];W[kr];B[cp];W[co];B[bq];W[ci];B[bo];W[bn];B[ap];W[jc];B[kc];W[jb];B[kb];W[je];B[kd];W[gb];B[ib];W[eq];B[er];W[hr];B[is];W[ie];B[ig];W[jn];B[fp];W[ke];B[le];W[hn];B[io];W[ae];B[an];W[bm];B[af];W[bf];B[ep];W[do];B[be];W[ad];B[mb];W[bf];B[gc];W[gd];B[be];W[kf];B[lf];W[bf];B[eh];W[ei];B[be];W[mj];B[nj];W[bf];B[nq];W[mr];B[be];W[ha];B[ja];W[bf];B[hb];W[fb];B[be];W[iq];B[hq];W[bf];B[am];W[al];B[ao];W[ai];B[be];W[ij];B[mi];W[bf];B[bl];W[ak];B[be];W[aq];B[ar];W[bf];B[bk];W[aj];B[be];W[hs];B[ip];W[bf];B[en];W[em];B[be];W[oe];B[pe];W[bf];B[cm];W[dn];B[be];W[js];B[iq];W[bf];B[ls];W[ms];B[be];W[rf];B[sd];W[bf];B[se];W[ag];B[gh];W[hh];B[gi];W[gj];B[ko];W[hg];B[if];W[kn];B[cg];W[dh];B[gg];W[ee];B[ih];W[hi];B[ed];W[md];B[ee];W[ld];B[na];W[lc];B[lb];W[oa];B[ma];W[dg];B[eg];W[sp];B[sn];W[ga];B[ia];W[he];B[jo];W[nn];B[oo];W[lo];B[on];W[jf];B[mo];W[fh])` },
+  { id:"game32", title:"二連星 仲邑菫 vs 高根台",        black:"仲邑菫",    white:"高根台",    date:"2024-12-22", level:"中級",
+    sgf:`(;GM[1]FF[4]SZ[19]PB[仲邑菫]BR[三段]PW[高根台]WR[九段]KM[6.5]RE[W+R]DT[2024-12-22]GN[Sh水協銀行海軍vs女子連勝対抗戦第5戦第2局];B[pd];W[dd];B[pp];W[dp];B[fq];W[cn];B[fc];W[hc];B[fe];W[df];B[jc];W[ec];B[fb];W[he];B[eg];W[ef];B[ff];W[fg];B[gg];W[fh];B[hf];W[jd];B[kc];W[jf];B[kd];W[ke];B[id];W[ie];B[le];W[lf];B[me];W[hd];B[je];W[fd];B[kf];W[if];B[kg];W[qd];B[qc];W[pc];B[rc];W[qe];B[pe];W[qf];B[oc];W[qi];B[qk];W[qq];B[pq];W[qp];B[qn];W[qo];B[pn];W[po];B[oo];W[pr];B[or];W[qr];B[nq];W[on];B[no];W[rn];B[rm];W[ro];B[pi];W[pb];B[ob];W[ph];B[pj];W[oh];B[ri];W[rh];B[rj];W[ni];B[mj];W[nj];B[nk];W[rd];B[mk];W[pf];B[fo];W[dr];B[dm];W[dn];B[em];W[hq];B[er];W[en];B[fn];W[fm];B[ek];W[fl];B[fk];W[hm];B[in];W[el];B[dl];W[hl];B[dj];W[gp];B[ep];W[fp];B[eo];W[dq];B[hn];W[eq];B[hi];W[kp];B[ip];W[ho];B[go];W[iq];B[kn];W[ne];B[of];W[nf];B[od];W[nd];B[eb];W[dc];B[db];W[cb];B[hb];W[gf];B[bb];W[cc];B[gc];W[ge];B[fi];W[op];B[oq];W[mp];B[np];W[do];B[gn];W[jo];B[jn];W[oe];B[gh];W[eh];B[dh];W[ei];B[di];W[dg];B[io];W[jq];B[bm];W[ch];B[bi];W[bh];B[ca];W[mq];B[mo];W[rl];B[ql];W[nb];B[qb];W[nc];B[pa];W[ki];B[kh];W[li];B[mi];W[lh];B[mh];W[lg];B[ng];W[og];B[mf];W[jh];B[ji];W[jg];B[ke];W[ii];B[jj];W[ij];B[ih];W[hj];B[gj];W[hg];B[jk];W[gk];B[gm];W[hh])` },
+  { id:"game33", title:"二連星 富士田明彦 vs 黄翊祖",    black:"富士田明彦", white:"黄翊祖",   date:"2025-08-21", level:"中級",
+    sgf:`(;GM[1]FF[4]SZ[19]PB[富士田明彦]BR[八段]PW[黄翊祖]WR[九段]KM[6.5]RE[B+R]DT[2025-08-21]GN[第51期名人戦予選];B[pd];W[dd];B[pp];W[dp];B[cq];W[dq];B[cp];W[do];B[bn];W[qf];B[hq];W[ho];B[jp];W[nc];B[nd];W[md];B[ne];W[pc];B[qc];W[oc];B[qd];W[qh];B[ng];W[lc];B[qj];W[pj];B[pk];W[pi];B[ql];W[nj];B[ok];W[re];B[rg];W[mf];B[mg];W[pf];B[me];W[od];B[oe];W[pe];B[kd];W[le];B[ld];W[mc];B[lf];W[ke];B[jd];W[je];B[id];W[ie];B[hd];W[lh];B[kg];W[he];B[gd];W[jh];B[kh];W[ki];B[li];W[mi];B[lj];W[kj];B[jg];W[lk];B[hg];W[ge];B[fe];W[gg];B[ff];W[gf];B[ih];W[fd];B[kb];W[kc];B[jb];W[qb];B[ed];W[fc];B[ec];W[gc];B[hb];W[ee];B[de];W[ef];B[fg];W[gh];B[eg];W[dc];B[eb];W[df];B[dg];W[ce];B[cf];W[de];B[db];W[cg];B[ch];W[bf];B[bg];W[ei];B[ji];W[mj];B[lg];W[ii];B[jj];W[hi];B[jk];W[hk];B[jn];W[jm];B[hh];W[kn];B[in];W[im];B[hn];W[hm];B[gn];W[dh];B[cf];W[of];B[nf];W[cg];B[pb];W[rb];B[cf];W[if];B[kl];W[km];B[gi];W[cg];B[hj];W[ij];B[cf];W[cm];B[cr];W[br];B[er];W[cs];B[ds];W[dr];B[fh];W[gb];B[pq];W[kp];B[ir];W[jq];B[ip];W[kq];B[lr];W[lq];B[kr];W[lp];B[on];W[em];B[qn];W[lr];B[mr];W[nr];B[cr];W[bs];B[gr];W[fq];B[mq];W[dm];B[dl];W[dn];B[bl];W[gq];B[fp];W[hp];B[hr];W[fn];B[fm];W[fo];B[gm];W[go];B[dr];W[nq];B[mp];W[cr];B[mo];W[or];B[np];W[dr];B[nm];W[rq];B[qq];W[ro];B[rr];W[sr];B[qr];W[rm];B[rl];W[ns];B[nn];W[op];B[oq];W[oo];B[rp];W[sp];B[qp];W[rj];B[ri];W[qi];B[qk];W[sq];B[nr];W[sl];B[sk];W[nq];B[ps];W[ol];B[nl];W[nk];B[om];W[pm];B[pl])` },
+  { id:"game34", title:"二連星 朴廷桓 vs 姜東潤",        black:"朴廷桓",    white:"姜東潤",    date:"2026-04-03", level:"上級",
+    sgf:`(;GM[1]FF[4]SZ[19]PB[朴廷桓]BR[九段]PW[姜東潤]WR[九段]KM[6.5]RE[B+R]DT[2026-04-03]GN[第31回GSカルテックス杯プロ棋戦2回戦];B[pd];W[dd];B[pp];W[dp];B[cq];W[dq];B[cp];W[do];B[bn];W[qc];B[qd];W[pc];B[nc];W[oc];B[od];W[nb];B[cc];W[dc];B[cd];W[de];B[ce];W[df];B[cf];W[mc];B[nd];W[rd];B[re];W[rc];B[dg];W[eg];B[eh];W[fg];B[ke];W[qf];B[fh];W[gg];B[hp];W[of];B[dh];W[mf];B[hd];W[kc];B[fc];W[fd];B[gd];W[fe];B[hf];W[hg];B[ig];W[ih];B[jh];W[ii];B[jg];W[jd];B[je];W[md];B[nq];W[cn];B[bm];W[hq];B[iq];W[cr];B[br];W[hr];B[ip];W[ir];B[jr];W[dr];B[co];W[ro];B[rp];W[qp];B[qo];W[qq];B[rq];W[po];B[qn];W[pq];B[op];W[rn];B[rr];W[qm];B[pn];W[pm];B[on];W[om];B[nn];W[nj];B[gq];W[gr];B[fq];W[fr];B[fo];W[fn];B[eq];W[er];B[en];W[dn];B[em];W[dl];B[dm];W[cm];B[cl];W[eb];B[cs];W[eo];B[fm];W[gn];B[go];W[ds];B[is];W[bq];B[bp];W[ar];B[aq];W[bs];B[bq];W[ic];B[ji];W[jj];B[kj];W[ao];B[an];W[kk];B[li];W[lj];B[ki];W[jn];B[gl];W[jq];B[kr];W[hn];B[ko];W[dk];B[ck];W[fk];B[gk];W[gj];B[fj];W[ij];B[jk];W[lk];B[lg];W[ej];B[fi];W[cj];B[ik];W[bj];B[al];W[gi];B[fl];W[ek];B[im];W[in];B[kl];W[lm];B[hk];W[bh];B[ll];W[lo];B[kp];W[ml];B[km];W[cg];B[bg];W[ch];B[cb];W[mh];B[mk];W[mj];B[lf];W[kn];B[mm];W[mn];B[ln];W[ak];B[bl];W[lm];B[nl];W[nm];B[ln];W[hs];B[fs];W[lm];B[ml];W[ol];B[jm];W[mq];B[mp])` },
+  { id:"game35", title:"二連星 柳時熏 vs 小林覚",        black:"柳時熏",    white:"小林覚",    date:"2026-01-26", level:"上級",
+    sgf:`(;GM[1]FF[4]SZ[19]PB[柳時熏]BR[九段]PW[小林覚]WR[九段]KM[6.5]RE[B+R]DT[2026-01-26]GN[第52期名人戦予選];B[pd];W[dd];B[pp];W[dp];B[fq];W[nc];B[cn];W[dn];B[dm];W[en];B[em];W[co];B[bm];W[fn];B[bo];W[bp];B[fm];W[ao];B[bn];W[dq];B[cf];W[gm];B[gl];W[cl];B[ck];W[dk];B[cj];W[hl];B[gk];W[hk];B[gj];W[hj];B[gi];W[bl];B[dl];W[hi];B[hh];W[fl];B[bk];W[gh];B[ej];W[df];B[ih];W[gg];B[jp];W[if];B[kh];W[kk];B[ke];W[oe];B[qf];W[mh];B[me];W[pe];B[qe];W[pc];B[od];W[nd];B[qc];W[oc];B[qd];W[ne];B[lc];W[id];B[ng];W[mf];B[je];W[jg];B[ie];W[jh];B[hd];W[lq];B[iq];W[lo];B[er];W[qn];B[qo];W[pn];B[oq];W[hp];B[jr];W[qh];B[pg];W[lf];B[oi];W[qk];B[fc];W[ec];B[fb];W[ph];B[oh];W[dr];B[ds];W[ce];B[rn];W[rm];B[ro];W[eb];B[kg];W[lb];B[mb];W[mc];B[kb];W[ld];B[kc];W[kf];B[pj];W[qj];B[rh];W[ri];B[rg];W[nj];B[pk];W[pl];B[ol];W[pm];B[jn];W[cs];B[es];W[br];B[lm];W[mn];B[jl];W[im];B[jm];W[io];B[kp];W[mm];B[le];W[nf];B[ll];W[lk];B[ml];W[np];B[jk];W[jj];B[ij];W[ki];B[cg];W[nq];B[nr];W[mr];B[or];W[fi];B[fj];W[dg];B[be];W[bd];B[hn];W[in];B[ii];W[ik];B[hm];W[il];B[gn];W[gq];B[gr];W[fp];B[hq];W[go];B[hf];W[hr];B[gp];W[qb];B[rb];W[gq];B[fr];W[ra];B[pb];W[pa];B[qa];W[gs];B[ir];W[qb];B[sb];W[gd];B[hc];W[fd];B[qa];W[kr];B[ok];W[qb];B[lp];W[qq];B[mp];W[mq];B[rr];W[op];B[pq];W[ch];B[bh];W[dh];B[ad];W[ac];B[ae];W[bc];B[ci];W[fa];B[ga];W[ea];B[ap];W[aq];B[gf];W[ff];B[ei];W[nk];B[hs];W[fh];B[jf];W[ig];B[om];W[md];B[on];W[oo];B[sm];W[sl];B[rl];W[sn];B[sk])` },
+  { id:"game36", title:"二連星 余正麒 vs 一力遼",        black:"余正麒",    white:"一力遼",    date:"2025-09-17", level:"上級",
+    sgf:`(;GM[1]FF[4]SZ[19]PB[余正麒]BR[八段]PW[一力遼]WR[九段]KM[6.5]RE[W+R]DT[2025-09-17]GN[第73期王座戦挑戦者決定戦];B[pd];W[dd];B[pp];W[dp];B[cq];W[dq];B[cp];W[do];B[bn];W[qf];B[nc];W[qq];B[qp];W[pq];B[nq];W[nr];B[mq];W[mr];B[lq];W[pj];B[qh];W[ph];B[pi];W[oi];B[qi];W[pg];B[rk];W[oq];B[op];W[ol];B[ql];W[md];B[mc];W[kd];B[ni];W[oh];B[ld];W[le];B[lc];W[kf];B[je];W[ke];B[jc];W[cr];B[br];W[bo];B[co];W[cn];B[bp];W[bm];B[dn];W[an];B[dr];W[dm];B[en];W[fq];B[gn];W[iq];B[io];W[em];B[eo];W[fp];B[cl];W[cm];B[cs];W[go];B[fm];W[hn];B[ho];W[in];B[jn];W[hl];B[fl];W[ek];B[fk];W[ej];B[fj];W[jm];B[ko];W[km];B[gr];W[hp];B[gq];W[gp];B[jr];W[ir];B[kr];W[er];B[gs];W[lo];B[kp];W[hj];B[fi];W[ei];B[eh];W[fh];B[gh];W[fg];B[hi];W[ii];B[ih];W[ji];B[dh];W[gf];B[cj];W[bl];B[hf];W[he];B[if];W[gg];B[hg];W[jd];B[id];W[gd];B[hd];W[kc];B[gc];W[fc];B[fb];W[fd];B[kg];W[jb];B[hb];W[eb];B[kh];W[mg];B[mh];W[lg];B[lh];W[nh];B[ce];W[cd];B[bd];W[bc];B[bf];W[ad];B[bk];W[dk];B[bh];W[ck];B[bj];W[no];B[np];W[ep];B[fn];W[fr];B[is];W[ds];B[es];W[fs];B[hs];W[ds];B[cr];W[ip];B[jo];W[aq];B[ap];W[ar];B[as];W[bs];B[nj];W[lj];B[as];W[di];B[ci];W[bs];B[lk];W[kk];B[as];W[cg];B[df];W[bs];B[ll];W[jf];B[kj];W[ki];B[li];W[jj];B[as];W[ao];B[nl];W[bs];B[ie];W[ik];B[as];W[gj];B[gi];W[bs];B[of];W[od];B[nd];W[nf];B[ne];W[me];B[as];W[qd];B[qc];W[bs];B[oj];W[pe];B[pc];W[bq];B[oe];W[qg];B[rq];W[rr];B[rp];W[sr];B[rd];W[ln];B[lb];W[qj];B[ri];W[rj];B[sj];W[rh];B[si];W[sh];B[sk];W[rf];B[ae];W[be];B[gk];W[hk];B[bd];W[ac];B[ea];W[da];B[fa];W[db];B[nn];W[be];B[ef];W[af];B[bg];W[mn];B[on];W[ic];B[ib];W[ge];B[el];W[dl];B[kl];W[jl];B[mj];W[mm];B[kj];W[jk];B[nm];W[jg];B[jh];W[qe])` },
+  { id:"game37", title:"二連星 林怡廷 vs 岩田紗絵加",    black:"林怡廷",    white:"岩田紗絵加", date:"2026-02-10", level:"上級",
+    sgf:`(;GM[1]FF[4]SZ[19]PB[林怡廷]BR[三段]PW[岩田紗絵加]WR[二段]KM[6.5]RE[W+5.5]DT[2026-02-10]GN[関西棋院vs海峰棋院交流戦2026];B[pd];W[dd];B[pp];W[dp];B[cq];W[dq];B[cp];W[cn];B[bn];W[cm];B[bm];W[cl];B[mq];W[nc];B[cc];W[dc];B[cd];W[de];B[bf];W[qf];B[pf];W[pg];B[of];W[qd];B[qc];W[qe];B[nd];W[pe];B[od];W[rc];B[pb];W[qb];B[pc];W[rb];B[kc];W[kq];B[co];W[do];B[en];W[gp];B[hd];W[md];B[mf];W[le];B[mb];W[lf];B[qn];W[ic];B[id];W[lb];B[lc];W[mc];B[nb];W[jc];B[jd];W[kb];B[kd];W[gb];B[gc];W[hb];B[la];W[jb];B[lg];W[jf];B[me];W[ld];B[fb];W[eb];B[mg];W[hf];B[gf];W[gg];B[ff];W[hg];B[fc];W[fa];B[fg];W[ge];B[fe];W[he];B[gd];W[cf];B[fi];W[hi];B[gk];W[hk];B[hj];W[ij];B[gj];W[ik];B[be];W[ch];B[kg];W[je];B[gm];W[im];B[cj];W[eh];B[fh];W[dj];B[dk];W[ej];B[ck];W[ek];B[dl];W[cb];B[bb];W[ba];B[dg];W[cg];B[ad];W[bc];B[ab];W[ce];B[bd];W[ci];B[hn];W[em];B[el];W[fl];B[gl];W[dm];B[fm];W[bk];B[bj];W[aj];B[bi];W[bh];B[fk];W[ai];B[fl];W[af];B[dn];W[ip];B[jp];W[iq];B[ih];W[jh];B[jg];W[ii];B[io];W[ki];B[ig];W[gi];B[og];W[mj];B[ph];W[rh];B[kk];W[ll];B[jq];W[jr];B[kr];W[lr];B[kp];W[ks];B[lk];W[kl];B[mk];W[jk];B[ml];W[kn];B[lm];W[km];B[lq];W[kj];B[kr];W[hr];B[ri];W[qi];B[rg];W[rj];B[qg];W[rf];B[se];W[sf];B[sg];W[rd];B[qk];W[qq];B[pq];W[qp];B[qo];W[pr];B[or];W[rr];B[lj];W[li];B[mi];W[mm];B[nm];W[mn];B[ps];W[qs];B[qr];W[oe];B[ne];W[pr];B[ag];W[bg];B[qr];W[ei];B[fj];W[pr];B[hh];W[gh];B[qr];W[rk];B[rl];W[pr];B[qa];W[ra];B[qr];W[ql];B[pl];W[pr];B[hp];W[gq];B[qr];W[si];B[sk];W[pr];B[ga];W[ea];B[qr];W[ed];B[fd];W[pr];B[ca];W[da];B[qr];W[qm];B[rm];W[pr];B[is];W[nn];B[nj];W[os];B[ir];W[hq];B[js];W[cr];B[br];W[hs];B[ls];W[dr];B[ns];W[po];B[op];W[nr];B[ps];W[oo];B[on];W[om];B[pm];W[os];B[oq];W[ms];B[no];W[ks];B[dh];W[di];B[ls];W[mo];B[np];W[ks];B[lo];W[ln];B[ls];W[nl];B[eg];W[ec];B[nk];W[ks];B[ke];W[kf];B[ls];W[ak];B[bl];W[ks];B[al];W[jr];B[ah];W[ai];B[rp];W[rq];B[mr];W[kq];B[ie];W[if];B[kr];W[pa];B[oa];W[kq];B[ro];W[mp];B[pn];W[bs];B[kr];W[oc];B[ls];W[ns];B[ob];W[lr];B[bq];W[kq];B[eo];W[nq];B[kr];W[oo];B[po];W[kq];B[aa];W[ac];B[kr];W[ls];B[jo];W[ho];B[in];W[ep];B[ka];W[ja];B[ma];W[fo];B[ol];W[nm];B[hc];W[ia];B[kh];W[ji];B[aj];W[ah];B[jn];W[jm];B[hl];W[il];B[lh];W[kq];B[lp];W[sp];B[so];W[sq];B[gn];W[go];B[kr];W[ar];B[kq];W[cs];B[aq];W[as];B[qa];W[df];B[pa])` },
+  { id:"game38", title:"二連星 柯潔 vs 韓相朝",          black:"柯潔",      white:"韓相朝",    date:"2024-09-30", level:"上級",
+    sgf:`(;GM[1]FF[4]SZ[19]PB[柯潔]BR[九段]PW[韓相朝]WR[六段]KM[6.5]RE[B+R]DT[2024-09-30]GN[第29回LG杯朝鮮日報棋王戦3回戦];B[pd];W[dd];B[pp];W[dp];B[fc];W[qq];B[pq];W[qp];B[po];W[rn];B[cf];W[df];B[dg];W[ef];B[cd];W[cc];B[ce];W[dc];B[ic];W[he];B[ch];W[jd];B[jc];W[kd];B[lc];W[me];B[jf];W[kc];B[kb];W[ld];B[mc];W[jb];B[ib];W[lb];B[ja];W[nc];B[mb];W[nb];B[qc];W[pf];B[of];W[md];B[la];W[pe];B[od];W[oe];B[nd];W[ne];B[qr];W[rr];B[ro];W[pr];B[qo];W[pk];B[or];W[qs];B[kq];W[fh];B[nj];W[nk];B[mk];W[nl];B[pj];W[mj];B[ni];W[lk];B[qk];W[pl];B[mi];W[ml];B[rl];W[li];B[lh];W[ki];B[de];W[ee];B[ed];W[eb];B[cn];W[rm];B[qi];W[rj];B[qj];W[qm];B[qg];W[nq];B[oq];W[np];B[sq];W[sr];B[lr];W[iq];B[ip];W[hp];B[io];W[hq];B[no];W[mo];B[mn];W[nn];B[oo];W[lo];B[mp];W[lp];B[mq];W[pg];B[ph];W[qd];B[rd];W[rg];B[re];W[rf];B[mg];W[kg];B[kh];W[jh];B[jg];W[kf];B[og];W[fd];B[gd];W[ec];B[cq];W[cp];B[dq];W[bq];B[br];W[bp];B[fq];W[fp];B[gp];W[ep];B[gq];W[go];B[ho];W[eq];B[er];W[dr];B[gn];W[fo];B[fr];W[cr];B[jq];W[cj];B[dj];W[dk];B[ck];W[di];B[bj];W[ej];B[bl];W[qe];B[pc];W[il];B[ge];W[hf];B[jm];W[im];B[jn];W[jl];B[ln];W[cl];B[bk];W[hn];B[dl];W[dm];B[cm];W[el];B[eg];W[fg];B[gf];W[gg];B[bc];W[bb];B[bd];W[ci];B[bi];W[gc];B[hd];W[id];B[hc];W[oh];B[oi];W[ng];B[nh];W[nf];B[ql];W[om];B[rh];W[gb];B[ab];W[ba];B[in];W[hm];B[dn];W[km];B[kn];W[em];B[eh];W[ei];B[sp];W[rq];B[os];W[ps];B[bo];W[gs];B[gr])` },
+];
+
+// ===== 状態 =====
+let kifuList = [];
+let currentFilter = '全て';
+let playerName = "";
+let currentKifu = null;
+let selectedGrade = '上級'; // プレイヤーが選択したグレード
+let studyMove = 0;
+let studyMaxMove = 0;
+let studyTimer = null;
+let studyTimeLeft = 180;
+let quizMove = 0;
+let quizScore = 0;
+let quizHintUsed = false;
+let quizAfterWrong = false; // 不正解後フラグ
+let quizHintMoves = [];
+let quizShowHint = false;
+let quizFeedback = false;
+let quizTimer = null;
+let quizTimeLeft = 180;
+let quizBoardMoves = [];
+let quizCurrentColor = "black";
+let hoverCell = null;
+let scores = [];
+
+try { scores = JSON.parse(localStorage.getItem("igo_scores") || "[]"); } catch {}
+
+// ===== SGFパーサー =====
+function parseSGF(text, fileName) {
+  const get = k => { const m = text.match(new RegExp(k + "\\[([^\\]]*?)\\]")); return m ? m[1] : ""; };
+  const black = get("PB") || "黒";
+  const white = get("PW") || "白";
+  const date  = get("DT") || get("DA") || "";
+  const title = get("GN") || get("EV") || get("RO") || fileName.replace(/\.sgf$/i, "");
+  const moveRe = /;[BW]\[([a-s]{0,2})\]/g;
+  const moves = []; let m;
+  while ((m = moveRe.exec(text)) !== null) {
+    const raw = m[1];
+    if (!raw || raw.length !== 2) continue;
+    const col = SGFCOLS.indexOf(raw[0]);
+    const row = SGFCOLS.indexOf(raw[1]);
+    if (col < 0 || row < 0 || col > 18 || row > 18) continue;
+    moves.push(COLS[col] + (row + 1));
+    if (moves.length >= 50) break;
+  }
+  return { black, white, date, title, moves, id: fileName };
+}
+
+function parseMove(mv) { return { col: COLS.indexOf(mv[0]), row: parseInt(mv.slice(1)) - 1 }; }
+
+// 盤面上の連（グループ）を取得し、呼吸点がなければ除去する
+function removeDeadStones(board, lastCol, lastRow, capturedColor) {
+  const size = BOARD_SIZE;
+  const key = (c, r) => `${c},${r}`;
+  const stoneMap = {};
+  board.forEach(s => { stoneMap[key(s.col, s.row)] = s.color; });
+
+  // 隣接4方向
+  const neighbors = (c, r) => [[c-1,r],[c+1,r],[c,r-1],[c,r+1]].filter(([nc,nr]) => nc>=0&&nc<size&&nr>=0&&nr<size);
+
+  // グループとその呼吸点を調べる
+  function getGroupAndLiberties(startCol, startRow) {
+    const color = stoneMap[key(startCol, startRow)];
+    if (!color) return null;
+    const group = [];
+    const liberties = new Set();
+    const visited = new Set();
+    const stack = [[startCol, startRow]];
+    while (stack.length) {
+      const [c, r] = stack.pop();
+      const k = key(c, r);
+      if (visited.has(k)) continue;
+      visited.add(k);
+      if (stoneMap[k] !== color) continue;
+      group.push(k);
+      for (const [nc, nr] of neighbors(c, r)) {
+        const nk = key(nc, nr);
+        if (!stoneMap[nk]) liberties.add(nk);
+        else if (stoneMap[nk] === color && !visited.has(nk)) stack.push([nc, nr]);
+      }
+    }
+    return { group, liberties };
+  }
+
+  // 直前に置いた石の隣にある相手の石グループを調べて取る
+  const removed = new Set();
+  for (const [nc, nr] of neighbors(lastCol, lastRow)) {
+    const nk = key(nc, nr);
+    if (stoneMap[nk] !== capturedColor) continue;
+    const result = getGroupAndLiberties(nc, nr);
+    if (result && result.liberties.size === 0) {
+      result.group.forEach(k => removed.add(k));
+    }
+  }
+
+  return board.filter(s => !removed.has(key(s.col, s.row)));
+}
+
+function buildBoard(kifu, upTo) {
+  let board = [];
+  for (let i = 0; i < upTo; i++) {
+    const mv = kifu.moves[i];
+    const { col, row } = parseMove(mv);
+    const color = i % 2 === 0 ? "black" : "white";
+    const opponent = color === "black" ? "white" : "black";
+    board.push({ col, row, color });
+    board = removeDeadStones(board, col, row, opponent);
+  }
+  return board;
+}
+function formatTime(s) { return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; }
+function timerColorStyle(t) { return t>60?"#4ade80":t>30?"#fbbf24":"#f87171"; }
+
+// ===== 画面切替 =====
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ===== 棋譜データ初期化（SGFをパースしてkifuListに格納） =====
+function initKifuList() {
+  kifuList = KIFU_DATA.map(k => {
+    const parsed = parseSGF(k.sgf, k.id);
+    return { ...parsed, title: k.title, date: k.date, level: k.level, id: k.id };
+  });
+}
+initKifuList();
+
+// ===== トップ画面描画 =====
+function renderTopKifuList() {
+  const el = document.getElementById('top-kifu-list');
+  const list = kifuList
+    .slice()
+    .sort((a, b) => a.title.localeCompare(b.title, 'ja'));
+  el.innerHTML = '';
+  list.forEach(k => {
+    const item = document.createElement('div');
+    item.className = 'kifu-item';
+    const bestScore = getBestScore(k.id);
+    const scoreBadge = bestScore !== null
+      ? `<span style="font-size:11px;color:#e8c964;background:rgba(200,168,75,0.15);border:1px solid rgba(200,168,75,0.3);border-radius:10px;padding:2px 8px">Best: ${bestScore}点</span>`
+      : `<span style="font-size:11px;color:#6b7280">未プレイ</span>`;
+    item.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+      <div>
+        <span style="color:#e8c964;font-weight:700;margin-right:8px;font-size:13px">${k.title}</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        ${scoreBadge}
+        <span class="badge-black">⚫ ${k.black}</span>
+        <span style="color:#6b7280;font-size:11px">vs</span>
+        <span class="badge-white">⚪ ${k.white}</span>
+      </div>
+    </div>`;
+    item.onclick = () => { playerName ? goToGradeSelect(k) : startStudyDirect(k); };
+    el.appendChild(item);
+  });
+}
+
+function startStudyDirect(k) {
+  showScreen('s-name');
+  setTimeout(() => {
+    document.getElementById('name-input').focus();
+    document.getElementById('name-input').dataset.pendingKifu = k.id;
+  }, 100);
+}
+
+// 棋譜選択後→グレード選択画面へ
+function goToGradeSelect(k) {
+  currentKifu = k;
+  document.getElementById('grade-kifu-name').textContent =
+    `${k.title}　${k.black} vs ${k.white}`;
+  showScreen('s-grade');
+}
+
+renderTopKifuList();
+
+// スコア記録のベスト更新（グレード別）
+function saveBestScore(kifuId, grade, score) {
+  const key = `best_${kifuId}_${grade}`;
+  try {
+    const prev = JSON.parse(localStorage.getItem(key));
+    if (!prev || score > prev.score) {
+      localStorage.setItem(key, JSON.stringify({ score }));
+    }
+  } catch {}
+}
+
+function getBestScore(kifuId) {
+  let best = null;
+  for (const g of ['上級','中級','初級']) {
+    try {
+      const d = JSON.parse(localStorage.getItem(`best_${kifuId}_${g}`));
+      if (d && (best === null || d.score > best)) best = d.score;
+    } catch {}
+  }
+  return best;
+}
+
+// ===== ダミー（アップロード削除後の互換用） =====
+function showUploadError(msg) {}
+function renderUploadList() {}
+
+function confirmName() {
+  const v = document.getElementById('name-input').value.trim();
+  if (!v) return;
+  playerName = v;
+  document.getElementById('select-sub').textContent = `プレーヤー：${playerName}　│　50手を3分以内に記憶`;
+  const pendingId = document.getElementById('name-input').dataset.pendingKifu;
+  if (pendingId) {
+    delete document.getElementById('name-input').dataset.pendingKifu;
+    const k = kifuList.find(x => x.id === pendingId);
+    if (k) { goToGradeSelect(k); return; }
+  }
+  renderKifuList();
+  showScreen('s-select');
+}
+
+// ===== 棋譜選択 =====
+function renderKifuList() {
+  const el = document.getElementById('kifu-list');
+  el.innerHTML = '';
+  kifuList.forEach(k => {
+    const item = document.createElement('div');
+    item.className = 'kifu-item';
+    item.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+      <div>
+        <span style="color:#e8c964;font-weight:700;margin-right:8px;font-size:13px">${k.title}</span>
+        <span style="color:#9ca3af;font-size:11px">${k.date}</span>
+        <span style="color:#6b7280;font-size:11px;margin-left:8px">${k.moves.length}手</span>
+      </div>
+      <div style="display:flex;gap:7px;align-items:center">
+        <span class="badge-black">⚫ ${k.black}</span>
+        <span style="color:#6b7280;font-size:11px">vs</span>
+        <span class="badge-white">⚪ ${k.white}</span>
+      </div>
+    </div>`;
+    item.onclick = () => startStudy(k);
+    el.appendChild(item);
+  });
+}
+
+// ===== 碁盤描画 =====
+function drawBoard(canvasId, moves, opts={}) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const size = canvas.width;
+  const ctx = canvas.getContext("2d");
+  const MARGIN = size / (BOARD_SIZE + 1);
+  const CELL = MARGIN;
+  ctx.clearRect(0, 0, size, size);
+
+  // 背景
+  const g = ctx.createRadialGradient(size/2,size/2,0,size/2,size/2,size*.7);
+  g.addColorStop(0,"#E8C97A"); g.addColorStop(1,"#B8932B");
+  ctx.fillStyle=g; ctx.fillRect(0,0,size,size);
+
+  // 格線
+  ctx.strokeStyle="#5C3D11"; ctx.lineWidth=0.7;
+  for (let i=0;i<BOARD_SIZE;i++) {
+    const p=MARGIN+i*CELL;
+    ctx.beginPath();ctx.moveTo(p,MARGIN);ctx.lineTo(p,MARGIN+(BOARD_SIZE-1)*CELL);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(MARGIN,p);ctx.lineTo(MARGIN+(BOARD_SIZE-1)*CELL,p);ctx.stroke();
+  }
+  // 星
+  ctx.fillStyle="#5C3D11";
+  for (const r of [3,9,15]) for (const c of [3,9,15]) { ctx.beginPath();ctx.arc(MARGIN+c*CELL,MARGIN+r*CELL,2.5,0,Math.PI*2);ctx.fill(); }
+
+  // ヒントA/B/C
+  const HC=["#3b82f6","#f59e0b","#10b981"];
+  (opts.hintMoves||[]).forEach(({col,row},i)=>{
+    const x=MARGIN+col*CELL,y=MARGIN+row*CELL;
+    ctx.beginPath();ctx.arc(x,y,CELL*.44,0,Math.PI*2);ctx.fillStyle=HC[i]+"cc";ctx.fill();
+    ctx.strokeStyle="#fff8";ctx.lineWidth=1.5;ctx.stroke();
+    ctx.fillStyle="#fff";ctx.font=`bold ${Math.round(CELL*.38)}px sans-serif`;
+    ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(["A","B","C"][i],x,y+1);
+  });
+
+  // フィードバック
+  if (opts.feedback==="correct" && moves.length>0) {
+    const l=moves[moves.length-1],x=MARGIN+l.col*CELL,y=MARGIN+l.row*CELL;
+    ctx.beginPath();ctx.arc(x,y,CELL*.56,0,Math.PI*2);ctx.fillStyle="#4ade8033";ctx.fill();ctx.strokeStyle="#4ade80";ctx.lineWidth=2.5;ctx.stroke();
+  }
+  if (opts.feedback==="wrong" && opts.lastWrong) {
+    const x=MARGIN+opts.lastWrong.col*CELL,y=MARGIN+opts.lastWrong.row*CELL;
+    ctx.strokeStyle="#f87171";ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(x-CELL*.28,y-CELL*.28);ctx.lineTo(x+CELL*.28,y+CELL*.28);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x+CELL*.28,y-CELL*.28);ctx.lineTo(x-CELL*.28,y+CELL*.28);ctx.stroke();
+  }
+
+  // 石
+  moves.forEach(({col,row,color},idx)=>{
+    const x=MARGIN+col*CELL,y=MARGIN+row*CELL,r=CELL*.46;
+    const sg=ctx.createRadialGradient(x-r*.3,y-r*.3,r*.1,x,y,r);
+    if(color==="black"){sg.addColorStop(0,"#888");sg.addColorStop(.4,"#222");sg.addColorStop(1,"#000");}
+    else{sg.addColorStop(0,"#fff");sg.addColorStop(.5,"#eee");sg.addColorStop(1,"#aaa");}
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=sg;ctx.fill();
+    if(color==="white"){ctx.strokeStyle="#999";ctx.lineWidth=0.5;ctx.stroke();}
+    if(idx===moves.length-1){ctx.strokeStyle=color==="black"?"#fff":"#444";ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,y,r*.4,0,Math.PI*2);ctx.stroke();}
+  });
+
+  // ホバープレビュー
+  if (opts.hover && !opts.feedback) {
+    const {col,row} = opts.hover;
+    const x=MARGIN+col*CELL,y=MARGIN+row*CELL,r=CELL*.38;
+    const occupied=moves.some(m=>m.col===col&&m.row===row);
+    const isHintOnly=(opts.hintMoves||[]).length>0 && !(opts.hintMoves||[]).find(h=>h.col===col&&h.row===row);
+    if (!occupied && !isHintOnly) {
+      ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);
+      ctx.fillStyle=opts.currentColor==="black"?"rgba(30,30,30,0.55)":"rgba(240,240,240,0.55)";
+      ctx.fill();
+      ctx.strokeStyle=opts.currentColor==="black"?"rgba(150,150,150,0.6)":"rgba(100,100,100,0.5)";
+      ctx.lineWidth=1.2;ctx.stroke();
+    }
+  }
+}
+
+function getCanvasCell(canvas, clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  const sx = canvas.width/rect.width, sy = canvas.height/rect.height;
+  const x=(clientX-rect.left)*sx, y=(clientY-rect.top)*sy;
+  const MARGIN=canvas.width/(BOARD_SIZE+1), CELL=MARGIN;
+  const col=Math.round((x-MARGIN)/CELL), row=Math.round((y-MARGIN)/CELL);
+  if(col<0||col>=BOARD_SIZE||row<0||row>=BOARD_SIZE) return null;
+  return {col,row};
+}
+
+// カスタムカーソル
+function makeCursor(color) {
+  const sc = color==="black" ? "%23222222" : "%23eeeeee";
+  return `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='8' fill='none' stroke='${sc}' stroke-width='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='8' stroke='${sc}' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='16' y1='24' x2='16' y2='30' stroke='${sc}' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='2' y1='16' x2='8' y2='16' stroke='${sc}' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='24' y1='16' x2='30' y2='16' stroke='${sc}' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") 16 16, crosshair`;
+}
+
+// ===== 学習フェーズ =====
+function startStudy(k) {
+  currentKifu = k;
+  studyMove = 0;
+  studyMaxMove = k.moves.length;
+  studyTimeLeft = 180;
+  document.getElementById('study-title').textContent = k.title;
+  document.getElementById('study-players').textContent = `${k.black} vs ${k.white}`;
+  updateStudyTimer();
+  drawStudyBoard();
+  updateStudyControls();
+  showScreen('s-study');
+  clearInterval(studyTimer);
+  studyTimer = setInterval(() => {
+    studyTimeLeft--;
+    updateStudyTimer();
+    if (studyTimeLeft <= 0) { clearInterval(studyTimer); startQuiz(); }
+  }, 1000);
+}
+
+function updateStudyTimer() {
+  const el = document.getElementById('study-timer');
+  el.textContent = formatTime(studyTimeLeft);
+  el.style.color = timerColorStyle(studyTimeLeft);
+  el.style.textShadow = `0 0 12px ${timerColorStyle(studyTimeLeft)}66`;
+}
+
+function drawStudyBoard() {
+  const moves = buildBoard(currentKifu, studyMove);
+  drawBoard('study-board', moves);
+  const pct = (studyMove / studyMaxMove * 100).toFixed(1);
+  document.getElementById('study-progress').style.width = pct + '%';
+  const infoEl = document.getElementById('study-move-info');
+  if (studyMove === 0) {
+    infoEl.textContent = '👉 「次 ▶」ボタンを押して棋譜を記憶してください';
+    infoEl.style.cssText = 'color:#e8c964;font-size:14px;font-weight:700;margin-bottom:8px;padding:8px 14px;background:rgba(232,201,100,0.1);border:1px solid rgba(232,201,100,0.35);border-radius:8px;letter-spacing:1px;animation:pulse 2s ease-in-out infinite;';
+    document.getElementById('study-move-label').textContent = '';
+  } else {
+    infoEl.textContent = `手数：${studyMove} / ${studyMaxMove}`;
+    infoEl.style.cssText = 'color:#9ca3af;font-size:12px;margin-bottom:4px;padding:0;background:none;border:none;border-radius:0;animation:none;';
+    const mv = currentKifu.moves[studyMove-1];
+    const color = (studyMove-1)%2===0 ? '⚫ 黒' : '⚪ 白';
+    document.getElementById('study-move-label').innerHTML = `第${studyMove}手：<span style="color:#e8c964;font-weight:700">${mv}</span>　${color}`;
+  }
+}
+
+function updateStudyControls() {
+  document.getElementById('btn-prev').disabled = studyMove === 0;
+  document.getElementById('btn-next').disabled = studyMove >= studyMaxMove;
+}
+
+function studyPrev() { if(studyMove>0){studyMove--;drawStudyBoard();updateStudyControls();} }
+function studyNext() { if(studyMove<studyMaxMove){studyMove++;drawStudyBoard();updateStudyControls();} }
+
+// ===== レベル別択数ヘルパー =====
+// initChoice: 通常時の択数（0=フリー着手）
+// wrongChoice: 不正解後の択数（1=正解のみ）
+// basePoint: ヒントなし正解時の基本点
+function levelChoice() {
+  if (selectedGrade === '初級') return { initChoice: 2, wrongChoice: 1, basePoint: 1 };
+  if (selectedGrade === '中級') return { initChoice: 3, wrongChoice: 1, basePoint: 2 };
+  return                         { initChoice: 0, wrongChoice: 1, basePoint: 3 }; // 上級
+}
+
+function maxScore() {
+  if (selectedGrade === '初級') return 50;
+  if (selectedGrade === '中級') return 100;
+  return 150; // 上級
+}
+
+// グレード選択画面への遷移
+function selectGrade(grade) {
+  selectedGrade = grade;
+  startStudy(currentKifu);
+}
+
+// ===== クイズフェーズ =====
+function startQuiz() {
+  clearInterval(studyTimer);
+  quizMove = 0; quizScore = 0; quizTimeLeft = 180;
+  quizHintUsed = false; quizAfterWrong = false;
+  quizHintMoves = []; quizShowHint = false; quizFeedback = false;
+  quizBoardMoves = [];
+  quizCurrentColor = "black";
+  updateQuizTimer();
+  updateQuizLabels();
+
+  const { initChoice } = levelChoice();
+  if (initChoice > 0) {
+    quizHintMoves = makeHints(quizMove, quizBoardMoves, initChoice);
+    quizShowHint = true; quizHintUsed = true;
+    applyHintLegend(initChoice);
+    document.getElementById('btn-hint').style.display = 'none';
+    document.getElementById('quiz-instruction').textContent = hintInstruction(initChoice);
+  } else {
+    document.getElementById('hint-legend').style.display = 'none';
+    document.getElementById('btn-hint').style.display = 'inline-block';
+    document.getElementById('quiz-instruction').textContent =
+      `碁盤をクリックして答える　正解で${levelChoice().basePoint}点`;
+  }
+
+  renderQuizBoard();
+  showScreen('s-quiz');
+  const qc = document.getElementById('quiz-board');
+  qc.style.cursor = makeCursor("black");
+  clearInterval(quizTimer);
+  quizTimer = setInterval(() => {
+    quizTimeLeft--;
+    updateQuizTimer();
+    if (quizTimeLeft <= 0) { clearInterval(quizTimer); finishQuiz(); }
+  }, 1000);
+}
+
+// ヒント凡例をN択に合わせて表示
+function applyHintLegend(count) {
+  const legend = document.getElementById('hint-legend');
+  legend.style.display = 'flex';
+  const badges = legend.querySelectorAll('.hint-badge');
+  badges.forEach((b, i) => {
+    const wrap = b.parentElement;
+    wrap.style.display = i < count ? '' : 'none';
+  });
+  const labelSpan = legend.querySelector('span:last-child');
+  if (labelSpan) labelSpan.textContent = count === 1 ? 'をクリック' : 'をクリック (+1点)';
+}
+
+function hintInstruction(count) {
+  if (count === 1) return '盤上のAをクリックして答える';
+  if (count === 2) return '盤上のA・Bをクリックして答える';
+  return '盤上のA・B・Cをクリックして答える';
+}
+
+function updateQuizTimer() {
+  const el = document.getElementById('quiz-timer');
+  el.textContent = formatTime(quizTimeLeft);
+  el.style.color = timerColorStyle(quizTimeLeft);
+  el.style.textShadow = `0 0 12px ${timerColorStyle(quizTimeLeft)}66`;
+}
+
+function updateQuizLabels() {
+  quizCurrentColor = quizMove%2===0 ? "black" : "white";
+  document.getElementById('quiz-move-label').textContent = `第${quizMove+1}手　${quizMove%2===0?"⚫ 黒番":"⚪ 白番"}`;
+  document.getElementById('quiz-progress-label').innerHTML = `進捗 ${quizMove}/50手　得点：<span style="color:#e8c964">${quizScore}</span>点`;
+  const qc = document.getElementById('quiz-board');
+  qc.style.cursor = makeCursor(quizCurrentColor);
+}
+
+function renderQuizBoard() {
+  drawBoard('quiz-board', quizBoardMoves, {
+    hintMoves: quizShowHint ? quizHintMoves : [],
+    hover: hoverCell,
+    currentColor: quizCurrentColor,
+    feedback: null
+  });
+}
+
+// クイズ盤面イベント
+const quizCanvas = document.getElementById('quiz-board');
+quizCanvas.addEventListener('click', e => {
+  if (quizFeedback) return;
+  const cell = getCanvasCell(quizCanvas, e.clientX, e.clientY);
+  if (!cell) return;
+  if (quizShowHint && !quizHintMoves.find(h=>h.col===cell.col&&h.row===cell.row)) return;
+  handleAnswer(cell);
+});
+quizCanvas.addEventListener('touchend', e => {
+  if (quizFeedback) return;
+  e.preventDefault();
+  const t = e.changedTouches[0];
+  const cell = getCanvasCell(quizCanvas, t.clientX, t.clientY);
+  if (!cell) return;
+  if (quizShowHint && !quizHintMoves.find(h=>h.col===cell.col&&h.row===cell.row)) return;
+  handleAnswer(cell);
+}, {passive:false});
+quizCanvas.addEventListener('mousemove', e => {
+  hoverCell = getCanvasCell(quizCanvas, e.clientX, e.clientY);
+  if (!quizFeedback) renderQuizBoard();
+});
+quizCanvas.addEventListener('mouseleave', () => { hoverCell = null; if (!quizFeedback) renderQuizBoard(); });
+
+function handleAnswer(cell) {
+  const mv = COLS[cell.col] + (cell.row + 1);
+  const correct = currentKifu.moves[quizMove];
+  const ok = mv.toUpperCase() === correct.toUpperCase();
+  quizFeedback = true;
+  hoverCell = null;
+  const { initChoice, wrongChoice, basePoint } = levelChoice();
+
+  if (ok) {
+    // 不正解後の正解は0点、それ以外はbasePoint
+    const pts = quizAfterWrong ? 0 : basePoint;
+    quizScore += pts;
+    quizBoardMoves = [...quizBoardMoves, {col:cell.col, row:cell.row, color:quizCurrentColor}];
+    drawBoard('quiz-board', quizBoardMoves, {feedback:"correct"});
+    const scoreMsg = pts > 0 ? `✓ 正解 +${pts}点` : "✓ 正解";
+    showFeedbackMsg(scoreMsg, "#4ade80");
+    setTimeout(() => {
+      hideFeedback();
+      quizFeedback = false;
+      quizShowHint = false; quizHintUsed = false; quizHintMoves = [];
+      quizAfterWrong = false;
+      const next = quizMove + 1;
+      if (next >= 50) { quizMove = 50; finishQuiz(); return; }
+      quizMove = next;
+      quizBoardMoves = buildBoard(currentKifu, next);
+      updateQuizLabels();
+      if (initChoice > 0) {
+        quizHintMoves = makeHints(quizMove, quizBoardMoves, initChoice);
+        quizShowHint = true; quizHintUsed = true;
+        applyHintLegend(initChoice);
+        document.getElementById('btn-hint').style.display = 'none';
+        document.getElementById('quiz-instruction').textContent = hintInstruction(initChoice);
+      } else {
+        document.getElementById('hint-legend').style.display = 'none';
+        document.getElementById('btn-hint').style.display = 'inline-block';
+        document.getElementById('quiz-instruction').textContent =
+          `碁盤をクリックして答える　正解で${basePoint}点`;
+      }
+      renderQuizBoard();
+    }, 700);
+  } else {
+    drawBoard('quiz-board', quizBoardMoves, {feedback:"wrong", lastWrong:{col:cell.col,row:cell.row}});
+    showFeedbackMsg("✗ 不正解", "#f87171");
+    quizAfterWrong = true;
+    const hints = makeHints(quizMove, quizBoardMoves, wrongChoice);
+    setTimeout(() => {
+      hideFeedback();
+      quizFeedback = false;
+      quizHintMoves = hints; quizShowHint = true; quizHintUsed = true;
+      applyHintLegend(wrongChoice);
+      document.getElementById('btn-hint').style.display = 'none';
+      document.getElementById('quiz-instruction').textContent = hintInstruction(wrongChoice);
+      renderQuizBoard();
+    }, 700);
+  }
+}
+
+function showFeedbackMsg(text, color) {
+  const ov = document.getElementById('feedback-overlay');
+  const tx = document.getElementById('feedback-text');
+  tx.textContent = text;
+  tx.style.color = color;
+  ov.style.border = `2px solid ${color}`;
+  ov.classList.add('show');
+}
+function showFeedback(correct) { showFeedbackMsg(correct?"✓ 正解":"✗ 不正解", correct?"#4ade80":"#f87171"); }
+function hideFeedback() { document.getElementById('feedback-overlay').classList.remove('show'); }
+
+function makeHints(qm, bm, count=3) {
+  const cp = parseMove(currentKifu.moves[qm]);
+
+  // count=1 は正解のみ（1択）
+  if (count === 1) {
+    return [{ col: cp.col, row: cp.row }];
+  }
+
+  const occupied = new Set(bm.map(m=>`${m.col},${m.row}`));
+
+  // 全空点を正解手からのマンハッタン距離でソート
+  const nearCands = [];
+  for (let c = 0; c < BOARD_SIZE; c++) {
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      if (c === cp.col && r === cp.row) continue;
+      if (occupied.has(`${c},${r}`)) continue;
+      const dist = Math.abs(c - cp.col) + Math.abs(r - cp.row);
+      nearCands.push({ col: c, row: r, dist });
+    }
+  }
+  nearCands.sort((a, b) => a.dist - b.dist);
+
+  // 距離条件：3択は1〜2路優先、2択は1路優先（いずれも1線除外）
+  const need = count - 1;
+  const is2nd = x => x.col >= 1 && x.col <= 17 && x.row >= 1 && x.row <= 17;
+  const maxDist1 = count >= 3 ? 2 : 1; // 3択=距離1〜2、2択=距離1
+  const pool     = nearCands.filter(x => x.dist >= 1 && x.dist <= maxDist1 && is2nd(x));
+  const fallback = nearCands.filter(x => x.dist >= 1 && x.dist <= 3 && is2nd(x));
+  const source = pool.length >= need ? pool : (fallback.length >= need ? fallback : nearCands);
+
+  const shuffled = source.slice().sort(() => Math.random() - 0.5);
+  const cands = shuffled.slice(0, need).map(x => ({ col: x.col, row: x.row }));
+
+  return [{ col: cp.col, row: cp.row }, ...cands].sort(() => Math.random() - 0.5);
+}
+
+function requestHint() {
+  // 上級の任意ヒントは3択
+  quizHintMoves = makeHints(quizMove, quizBoardMoves, 3);
+  quizShowHint = true; quizHintUsed = true;
+  applyHintLegend(3);
+  document.getElementById('btn-hint').style.display = 'none';
+  document.getElementById('quiz-instruction').textContent = hintInstruction(3);
+  renderQuizBoard();
+}
+
+function abortQuiz() { clearInterval(quizTimer); finishQuiz(); }
+
+function finishQuiz() {
+  clearInterval(quizTimer);
+  const mx = maxScore();
+  const entry = {
+    player: playerName, score: quizScore, answered: quizMove,
+    grade: selectedGrade,
+    date: new Date().toLocaleDateString("ja-JP"),
+    kifu: { title: currentKifu.title, date: currentKifu.date, black: currentKifu.black, white: currentKifu.white }
+  };
+  // グレード別スコア保存（ローカルストレージ）
+  const scoreKey = `igo_scores_${selectedGrade}`;
+  let gradeScores = [];
+  try { gradeScores = JSON.parse(localStorage.getItem(scoreKey) || "[]"); } catch {}
+  gradeScores = [...gradeScores, entry].sort((a,b)=>b.score-a.score).slice(0,100);
+  try { localStorage.setItem(scoreKey, JSON.stringify(gradeScores)); } catch {}
+  saveBestScore(currentKifu.id, selectedGrade, quizScore);
+
+  // サーバーに送信（チャレンジ回数・グローバルランキング用）
+  postScoreToServer({
+    player: playerName,
+    kifu: currentKifu.title,
+    grade: selectedGrade,
+    score: quizScore,
+    answered: quizMove
+  });
+  globalScores = null; // キャッシュをクリア（次回ランキング表示時に再取得）
+
+  const ratio = quizScore / mx;
+  document.getElementById('result-trophy').textContent = ratio>=0.8?"🏆":ratio>=0.5?"⭐":"🎯";
+  document.getElementById('result-score').innerHTML = `${quizScore}<span style="font-size:20px">点</span>`;
+  document.getElementById('result-player').textContent = `${playerName} さん`;
+  document.getElementById('result-kifu').textContent = `${currentKifu.title}　【${selectedGrade}】`;
+  document.getElementById('result-answered').textContent = quizMove<50?`${quizMove}手まで回答（途中終了）`:`50手全問回答　最高${mx}点`;
+  const perf = document.getElementById('result-perfect');
+  perf.style.display = (quizScore===mx&&quizMove>=50) ? 'block' : 'none';
+  showScreen('s-result');
+}
+
+function playAgain() {
+  renderTopKifuList();
+  showScreen('s-upload');
+}
+
+// ===== スコア一覧（グレード別タブ・ローカル/グローバルモード） =====
+let currentScoreTab = '上級';
+let currentScoreMode = 'local'; // 'local' or 'global'
+
+function setScoreMode(mode, btn) {
+  currentScoreMode = mode;
+  document.querySelectorAll('#score-mode-bar button').forEach(b => b.classList.remove('filter-active'));
+  btn.classList.add('filter-active');
+  if (mode === 'global') {
+    globalScores = null;
+    loadGlobalScores();
+  } else {
+    renderScoreList();
+  }
+}
+
+function setScoreTab(grade, btn) {
+  currentScoreTab = grade;
+  document.querySelectorAll('#score-tab-bar button').forEach(b => {
+    b.classList.remove('filter-active');
+    b.style.opacity = '0.6';
+  });
+  btn.classList.add('filter-active');
+  btn.style.opacity = '1';
+  const mx = grade==='上級'?150:grade==='中級'?100:50;
+  document.getElementById('score-tab-sub').textContent = `${grade}：最高${mx}点　上位100件`;
+  if (currentScoreMode === 'global' && globalScores === null) {
+    loadGlobalScores();
+  } else {
+    renderScoreList();
+  }
+}
+
+function renderScoreList() {
+  const el = document.getElementById('scores-list');
+  let list = [];
+
+  if (currentScoreMode === 'global') {
+    // グローバル：サーバーデータをグレードでフィルター
+    if (globalScores === null) { loadGlobalScores(); return; }
+    list = globalScores
+      .filter(s => s.grade === currentScoreTab)
+      .sort((a,b) => b.score - a.score)
+      .slice(0, 100);
+  } else {
+    // ローカル：このデバイスの記録
+    const scoreKey = `igo_scores_${currentScoreTab}`;
+    try { list = JSON.parse(localStorage.getItem(scoreKey) || "[]"); } catch {}
+  }
+
+  if (list.length === 0) {
+    el.innerHTML = '<div style="text-align:center;color:#6b7280;padding:32px">まだ記録がありません</div>';
+    return;
+  }
+  el.innerHTML = '';
+  list.forEach((s, i) => {
+    const rankColor = i===0?"#ffd700":i===1?"#c0c0c0":i===2?"#cd7f32":"#6b7280";
+    const borderColor = i<3?"rgba(200,168,75,0.4)":"rgba(255,255,255,0.07)";
+    const item = document.createElement('div');
+    item.className = 'score-item';
+    item.style.border = `1px solid ${borderColor}`;
+    // ローカルとグローバルで表示形式を合わせる
+    const kifuTitle = currentScoreMode === 'global' ? (s.kifu || '') : (s.kifu?.title || '');
+    const answered = s.answered;
+    const date = s.date || '';
+    item.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="color:${rankColor};font-weight:700;font-size:14px;min-width:22px">${i+1}</span>
+        <div>
+          <div style="font-weight:700;color:#e8d5a3">${s.player}</div>
+          <div style="font-size:11px;color:#9ca3af">${kifuTitle}　${answered<50?answered+'手(途中)　':'全50手　'}${date}</div>
+        </div>
+      </div>
+      <div style="font-size:20px;font-weight:900;color:#e8c964;font-family:monospace">${s.score}<span style="font-size:11px">点</span></div>`;
+    el.appendChild(item);
+  });
+}
+
+// スコア一覧表示時に再描画
+const origShowScreen = showScreen;
+window.showScreen = function(id) {
+  origShowScreen(id);
+  if (id === 's-scores') {
+    const btn = [...document.querySelectorAll('#score-tab-bar button')]
+      .find(b => b.textContent === currentScoreTab);
+    if (btn) setScoreTab(currentScoreTab, btn);
+    else renderScoreList();
+    // チャレンジ回数を最新化
+    loadChallengeCount();
+  }
+  if (id === 's-upload') { renderTopKifuList(); loadChallengeCount(); }
+};
+
+// 初期チェック完了（棋譜データは内蔵済み）
+
+// ===== AI研究モード =====
+let aiCandidates = []; // 現在の候補手（盤面オーバーレイ用）
+
+function openAIResearch() {
+  if (!currentKifu || studyMove === 0) {
+    alert('まず棋譜を1手以上進めてください。');
+    return;
+  }
+  const modal = document.getElementById('ai-research-modal');
+  modal.style.display = 'flex';
+
+  // 手番ラベル
+  const color = studyMove % 2 === 0 ? '⚫ 黒番' : '⚪ 白番';
+  document.getElementById('ai-move-label').textContent =
+    `${currentKifu.title}　第${studyMove}手まで　— 次は${color}`;
+
+  // APIキー確認
+  const savedKey = localStorage.getItem('anthropic_api_key') || '';
+  const keyArea = document.getElementById('ai-key-area');
+  const keyInput = document.getElementById('ai-key-input');
+  if (savedKey) {
+    keyArea.style.display = 'none';
+    keyInput.value = savedKey;
+  } else {
+    keyArea.style.display = 'block';
+  }
+
+  // 盤面描画（候補手なしの初期状態）
+  aiCandidates = [];
+  drawAIBoard([]);
+
+  // 結果エリアをリセット
+  document.getElementById('ai-loading').style.display = 'none';
+  document.getElementById('ai-result').style.display = 'none';
+  document.getElementById('ai-error').style.display = 'none';
+  document.getElementById('ai-analyze-btn-area').style.display = savedKey ? 'block' : 'none';
+}
+
+function saveApiKey() {
+  const val = document.getElementById('ai-key-input').value.trim();
+  if (!val.startsWith('sk-ant-')) {
+    alert('APIキーは sk-ant- で始まる文字列です。確認してください。');
+    return;
+  }
+  localStorage.setItem('anthropic_api_key', val);
+  document.getElementById('ai-key-area').style.display = 'none';
+  document.getElementById('ai-analyze-btn-area').style.display = 'block';
+}
+
+function clearApiKey() {
+  localStorage.removeItem('anthropic_api_key');
+  document.getElementById('ai-key-input').value = '';
+  document.getElementById('ai-key-area').style.display = 'block';
+  document.getElementById('ai-analyze-btn-area').style.display = 'none';
+  document.getElementById('ai-result').style.display = 'none';
+}
+
+// モーダル盤面描画（候補手マーカー付き）
+function drawAIBoard(candidates) {
+  const canvas = document.getElementById('ai-board');
+  if (!canvas) return;
+  const size = canvas.width;
+  const ctx = canvas.getContext('2d');
+  const MARGIN = size / (BOARD_SIZE + 1);
+  const CELL = MARGIN;
+
+  ctx.clearRect(0, 0, size, size);
+  const g = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size * 0.7);
+  g.addColorStop(0, '#E8C97A'); g.addColorStop(1, '#B8932B');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, size, size);
+
+  ctx.strokeStyle = '#5C3D11'; ctx.lineWidth = 0.7;
+  for (let i = 0; i < BOARD_SIZE; i++) {
+    const p = MARGIN + i * CELL;
+    ctx.beginPath(); ctx.moveTo(p, MARGIN); ctx.lineTo(p, MARGIN + (BOARD_SIZE-1)*CELL); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(MARGIN, p); ctx.lineTo(MARGIN + (BOARD_SIZE-1)*CELL, p); ctx.stroke();
+  }
+  ctx.fillStyle = '#5C3D11';
+  for (const r of [3,9,15]) for (const c of [3,9,15]) {
+    ctx.beginPath(); ctx.arc(MARGIN+c*CELL, MARGIN+r*CELL, 2.5, 0, Math.PI*2); ctx.fill();
+  }
+
+  const moves = buildBoard(currentKifu, studyMove);
+  moves.forEach(({col, row, color}) => {
+    const x = MARGIN + col * CELL, y = MARGIN + row * CELL, r = CELL * 0.46;
+    const sg = ctx.createRadialGradient(x-r*.3, y-r*.3, r*.1, x, y, r);
+    if (color === 'black') { sg.addColorStop(0,'#888'); sg.addColorStop(.4,'#222'); sg.addColorStop(1,'#000'); }
+    else { sg.addColorStop(0,'#fff'); sg.addColorStop(.5,'#eee'); sg.addColorStop(1,'#aaa'); }
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+    ctx.fillStyle = sg; ctx.fill();
+    if (color === 'white') { ctx.strokeStyle='#999'; ctx.lineWidth=0.5; ctx.stroke(); }
+  });
+  if (moves.length > 0) {
+    const l = moves[moves.length-1];
+    const x = MARGIN + l.col * CELL, y = MARGIN + l.row * CELL, r = CELL * 0.46;
+    ctx.strokeStyle = l.color === 'black' ? '#fff' : '#444';
+    ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, r*.4, 0, Math.PI*2); ctx.stroke();
+  }
+
+  // 候補手マーカー
+  const CAND_COLORS = ['#c0392b', '#2471a3', '#1e8449'];
+  const CAND_LABELS = ['①', '②', '③'];
+  candidates.forEach((cand, i) => {
+    if (!cand.col_idx && cand.col_idx !== 0) return;
+    const x = MARGIN + cand.col_idx * CELL, y = MARGIN + cand.row_idx * CELL;
+    const r = CELL * 0.46;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+    ctx.fillStyle = CAND_COLORS[i] + 'cc'; ctx.fill();
+    ctx.strokeStyle = CAND_COLORS[i]; ctx.lineWidth = 2.2; ctx.stroke();
+    ctx.fillStyle = 'white';
+    ctx.font = `bold ${Math.round(CELL * 0.38)}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(CAND_LABELS[i], x, y + 1);
+  });
+}
+
+// 盤面状態をテキスト化（AIプロンプト用）
+function boardToText() {
+  const moves = buildBoard(currentKifu, studyMove);
+  const COLS19 = 'ABCDEFGHJKLMNOPQRST';
+  const grid = Array.from({length: 19}, () => Array(19).fill('.'));
+  moves.forEach(({col, row, color}) => { grid[row][col] = color === 'black' ? '●' : '○'; });
+
+  let text = '   ';
+  for (let c = 0; c < 19; c++) text += COLS19[c] + ' ';
+  text += '\n';
+  for (let r = 0; r < 19; r++) {
+    text += String(19 - r).padStart(2) + ' ' + grid[r].join(' ') + '\n';
+  }
+
+  // 棋譜の手順（直近10手を表示）
+  const recentMoves = currentKifu.moves.slice(0, studyMove);
+  const start = Math.max(0, recentMoves.length - 10);
+  const recent = recentMoves.slice(start).map((mv, i) => {
+    const n = start + i + 1;
+    const c = n % 2 === 1 ? '黒' : '白';
+    return `第${n}手 ${c}${mv}`;
+  }).join('、');
+
+  const nextColor = studyMove % 2 === 0 ? '黒' : '白';
+  return `棋譜：${currentKifu.title}（${currentKifu.black} vs ${currentKifu.white}）
+直近の手順：${recent}
+次の手番：${nextColor}番
+
+現在の盤面（●=黒、○=白、.=空）：
+${text}`;
+}
+
+// 座標文字列→インデックス変換
+function coordToIdx(coord) {
+  const COLS19 = 'ABCDEFGHJKLMNOPQRST';
+  if (!coord || coord.length < 2) return null;
+  const colChar = coord[0].toUpperCase();
+  const rowNum = parseInt(coord.slice(1));
+  const col_idx = COLS19.indexOf(colChar);
+  const row_idx = 19 - rowNum;
+  if (col_idx < 0 || isNaN(row_idx) || row_idx < 0 || row_idx > 18) return null;
+  return { col_idx, row_idx };
+}
+
+// Claude API呼び出し & 結果表示
+async function runAIAnalysis() {
+  document.getElementById('ai-analyze-btn-area').style.display = 'none';
+  document.getElementById('ai-loading').style.display = 'block';
+  document.getElementById('ai-result').style.display = 'none';
+  document.getElementById('ai-error').style.display = 'none';
+
+  const boardText = boardToText();
+  const nextColor = studyMove % 2 === 0 ? '黒' : '白';
+
+  const prompt = `あなたはプロレベルの囲碁解説者です。以下の盤面を見て、次の${nextColor}番の有力手を3つ提案し、それぞれの棋理を日本語で解説してください。
+
+${boardText}
+
+以下のJSON形式のみで回答してください（他のテキストは一切不要）：
+{
+  "situation": "現在の局面の概況（2〜3文、${nextColor}番の視点で）",
+  "candidates": [
+    {
+      "coord": "座標（例：R16）",
+      "label": "手の名前・方針（10文字以内）",
+      "rating": "★★★ / ★★☆ / ★☆☆",
+      "explanation": "この手の棋理と狙い（50〜80文字）"
+    },
+    { "coord": "...", "label": "...", "rating": "...", "explanation": "..." },
+    { "coord": "...", "label": "...", "rating": "...", "explanation": "..." }
+  ]
+}`;
+
+  try {
+    const apiKey = localStorage.getItem('anthropic_api_key') || '';
+    if (!apiKey) {
+      document.getElementById('ai-loading').style.display = 'none';
+      document.getElementById('ai-key-area').style.display = 'block';
+      document.getElementById('ai-analyze-btn-area').style.display = 'none';
+      throw new Error('APIキーが設定されていません');
+    }
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await response.json();
+    const rawText = data.content?.map(b => b.text || '').join('') || '';
+
+    // JSON抽出
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('JSONが見つかりませんでした');
+    const result = JSON.parse(jsonMatch[0]);
+
+    // 座標→インデックス変換
+    const candidatesWithIdx = (result.candidates || []).map(c => ({
+      ...c,
+      ...( coordToIdx(c.coord) || {} )
+    }));
+
+    // 盤面再描画（候補手マーカー付き）
+    drawAIBoard(candidatesWithIdx);
+
+    // 局面概況
+    document.getElementById('ai-situation').innerHTML =
+      `<strong style="color:#a78bfa">📋 局面の概況</strong><br>${result.situation || ''}`;
+
+    // 候補手カード
+    const CAND_COLORS = ['#c0392b', '#2471a3', '#1e8449'];
+    const CAND_BG     = ['rgba(192,57,43,0.1)', 'rgba(36,113,163,0.1)', 'rgba(30,132,73,0.1)'];
+    const CAND_BORDER = ['rgba(192,57,43,0.35)', 'rgba(36,113,163,0.35)', 'rgba(30,132,73,0.35)'];
+    const LABELS      = ['①', '②', '③'];
+    const container = document.getElementById('ai-candidates');
+    container.innerHTML = '';
+    candidatesWithIdx.forEach((c, i) => {
+      const card = document.createElement('div');
+      card.style.cssText = `
+        background:${CAND_BG[i]};border:1px solid ${CAND_BORDER[i]};
+        border-radius:10px;overflow:hidden;
+      `;
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${CAND_BG[i]}">
+          <div style="
+            width:26px;height:26px;border-radius:50%;
+            background:${CAND_COLORS[i]};color:white;
+            display:flex;align-items:center;justify-content:center;
+            font-size:13px;font-weight:700;flex-shrink:0;
+            box-shadow:0 2px 6px rgba(0,0,0,0.3);
+          ">${LABELS[i]}</div>
+          <div style="font-family:serif;font-size:15px;font-weight:700;color:#e8d5a3">${c.coord}</div>
+          <div style="font-size:12px;color:#9ca3af;flex:1">${c.label || ''}</div>
+          <div style="font-size:12px;color:#e8c964">${c.rating || ''}</div>
+        </div>
+        <div style="padding:9px 12px;font-size:12px;line-height:1.8;color:#d1d5db;border-top:1px solid rgba(255,255,255,0.06)">
+          ${c.explanation || ''}
+        </div>`;
+      container.appendChild(card);
+    });
+
+    document.getElementById('ai-loading').style.display = 'none';
+    document.getElementById('ai-result').style.display = 'block';
+
+  } catch (err) {
+    document.getElementById('ai-loading').style.display = 'none';
+    document.getElementById('ai-error').style.display = 'block';
+    document.getElementById('ai-error').innerHTML =
+      `⚠️ 分析に失敗しました。<br><span style="font-size:11px;color:#6b7280">${err.message}</span><br><br>
+      <button onclick="runAIAnalysis()" style="background:none;border:1px solid #f87171;color:#f87171;padding:6px 16px;border-radius:8px;cursor:pointer;font-size:12px;font-family:inherit">再試行</button>`;
+    document.getElementById('ai-analyze-btn-area').style.display = 'block';
+  }
+}
+</script>
+</body>
+</html>
