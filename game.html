@@ -1269,6 +1269,10 @@ window.showScreen = function(id) {
 // ===== AI研究モード =====
 let aiCandidates = []; // 現在の候補手（盤面オーバーレイ用）
 
+function closeAIResearch() {
+  document.getElementById('ai-research-modal').style.display = 'none';
+}
+
 function openAIResearch() {
   if (!currentKifu || studyMove === 0) {
     alert('まず棋譜を1手以上進めてください。');
