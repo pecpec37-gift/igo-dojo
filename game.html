@@ -273,8 +273,10 @@
       <div id="study-move-label" style="margin-top:5px;font-family:monospace;font-size:12px;color:#e8d5a3;min-height:18px"></div>
     </div>
     <div class="row" style="justify-content:center">
+      <button class="btn-ghost" onclick="studyPrev5()" id="btn-prev5">5手◀◀</button>
       <button class="btn-ghost" onclick="studyPrev()" id="btn-prev">◀ 前</button>
       <button class="btn-ghost" onclick="studyNext()" id="btn-next" style="border-color:rgba(232,201,100,0.6);color:#e8c964;font-weight:700">次 ▶</button>
+      <button class="btn-ghost" onclick="studyNext5()" id="btn-next5" style="border-color:rgba(232,201,100,0.6);color:#e8c964;font-weight:700">▶▶5手</button>
       <button class="btn" onclick="startQuiz()">記憶完了 → クイズへ</button>
     </div>
     <div style="margin-top:10px;text-align:center">
@@ -881,10 +883,14 @@ function drawStudyBoard() {
 function updateStudyControls() {
   document.getElementById('btn-prev').disabled = studyMove === 0;
   document.getElementById('btn-next').disabled = studyMove >= studyMaxMove;
+  document.getElementById('btn-prev5').disabled = studyMove === 0;
+  document.getElementById('btn-next5').disabled = studyMove >= studyMaxMove;
 }
 
 function studyPrev() { if(studyMove>0){studyMove--;drawStudyBoard();updateStudyControls();} }
 function studyNext() { if(studyMove<studyMaxMove){studyMove++;drawStudyBoard();updateStudyControls();} }
+function studyPrev5() { studyMove=Math.max(0,studyMove-5); drawStudyBoard(); updateStudyControls(); }
+function studyNext5() { studyMove=Math.min(studyMaxMove,studyMove+5); drawStudyBoard(); updateStudyControls(); }
 
 // ===== レベル別択数ヘルパー =====
 // initChoice: 通常時の択数（0=フリー着手）
