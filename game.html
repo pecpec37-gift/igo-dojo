@@ -1137,10 +1137,22 @@ function abortQuiz() { clearInterval(quizTimer); finishQuiz(); }
 function finishQuiz() {
   clearInterval(quizTimer);
   const mx = maxScore();
-  const entry = {
-    player: playerName, score: quizScore, answered: quizMove,
+// 日付フォーマット: 任意の形式 → YY/M/D HH:MM
+function formatDate(input) {
+  if (!input) return '';
+  const d = new Date(input);
+  if (isNaN(d.getTime())) return input; // パース失敗はそのまま
+  const yy = String(d.getFullYear()).slice(2);
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${yy}/${m}/${day} ${hh}:${mm}`;
+}
+
+
     grade: selectedGrade,
-    date: new Date().toLocaleDateString("ja-JP"),
+    date: formatDate(new Date()),
     kifu: { title: currentKifu.title, date: currentKifu.date, black: currentKifu.black, white: currentKifu.white }
   };
   // グレード別スコア保存（ローカルストレージ）
@@ -1241,7 +1253,7 @@ function renderScoreList() {
     // ローカルとグローバルで表示形式を合わせる
     const kifuTitle = currentScoreMode === 'global' ? (s.kifu || '') : (s.kifu?.title || '');
     const answered = s.answered;
-    const date = s.date || '';
+    const date = formatDate(s.date || '');
     item.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px">
         <span style="color:${rankColor};font-weight:700;font-size:14px;min-width:22px">${i+1}</span>
