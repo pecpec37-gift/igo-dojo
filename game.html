@@ -1137,19 +1137,6 @@ function abortQuiz() { clearInterval(quizTimer); finishQuiz(); }
 function finishQuiz() {
   clearInterval(quizTimer);
   const mx = maxScore();
-// 日付フォーマット: 任意の形式 → YY/M/D HH:MM
-function formatDate(input) {
-  if (!input) return '';
-  const d = new Date(input);
-  if (isNaN(d.getTime())) return input; // パース失敗はそのまま
-  const yy = String(d.getFullYear()).slice(2);
-  const m = d.getMonth() + 1;
-  const day = d.getDate();
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  return `${yy}/${m}/${day} ${hh}:${mm}`;
-}
-
 
   const entry = {
     player: playerName, score: quizScore, answered: quizMove,
@@ -1222,6 +1209,19 @@ function setScoreTab(grade, btn) {
   } else {
     renderScoreList();
   }
+}
+
+// 日付フォーマット: 任意の形式 → YY/M/D HH:MM
+function formatDate(input) {
+  if (!input) return '';
+  const d = new Date(input);
+  if (isNaN(d.getTime())) return input;
+  const yy = String(d.getFullYear()).slice(2);
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${yy}/${m}/${day} ${hh}:${mm}`;
 }
 
 function renderScoreList() {
