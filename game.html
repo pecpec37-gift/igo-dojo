@@ -158,13 +158,22 @@
   <div class="card card-wide">
     <div style="text-align:center;margin-bottom:18px">
       <div style="font-size:40px;margin-bottom:6px">⚫⚪</div>
-      <div class="title">囲碁棋譜記憶力ゲーム</div>
-      <div class="sub">棋譜を選択 → 記憶 → 再現 → 採点　全40局収録</div>
+      <div class="title" id="top-mode-title">囲碁棋譜記憶力ゲーム</div>
+      <div class="sub" id="top-mode-sub">棋譜を選択 → 記憶 → 再現 → 採点　全40局収録</div>
       <div id="challenge-count" style="margin-top:10px;font-size:12px;color:#9ca3af;letter-spacing:1px">
         累計チャレンジ回数：読み込み中...
       </div>
     </div>
     <div class="scroll-list" id="top-kifu-list"></div>
+    <div id="challenge-start-area" style="display:none;text-align:center;padding:20px 0">
+      <div style="font-size:48px;margin-bottom:12px">🎲</div>
+      <div style="color:#e8d5a3;font-size:14px;margin-bottom:20px;line-height:1.8">
+        棋譜をランダムに選択して挑戦します。<br>何の棋譜が出るかはお楽しみ！
+      </div>
+      <button class="btn" onclick="startChallenge()" style="font-size:16px;padding:14px 36px;letter-spacing:2px">
+        🎲 ランダムに挑戦！
+      </button>
+    </div>
     <div style="margin-top:14px;text-align:center" id="upload-scores-btn">
       <button class="btn-ghost" onclick="showScreen('s-scores')">🏆 スコア一覧</button>
     </div>
@@ -277,7 +286,7 @@
       <button class="btn-ghost" onclick="studyPrev()" id="btn-prev">◀ 前</button>
       <button class="btn-ghost" onclick="studyNext()" id="btn-next" style="border-color:rgba(232,201,100,0.6);color:#e8c964;font-weight:700">次 ▶</button>
       <button class="btn-ghost" onclick="studyNext5()" id="btn-next5" style="border-color:rgba(232,201,100,0.6);color:#e8c964;font-weight:700">▶▶5手</button>
-      <button class="btn" onclick="startQuiz()">記憶完了 → クイズへ</button>
+      <button class="btn" id="btn-study-complete" onclick="startQuiz()">記憶完了 → クイズへ</button>
     </div>
     <div style="margin-top:10px;text-align:center">
       <button class="btn-ghost" id="btn-ai-research" onclick="openAIResearch()"
@@ -286,7 +295,7 @@
       </button>
     </div>
     <div style="margin-top:8px;text-align:center">
-      <button class="btn-danger" onclick="showScreen('s-select')">← 棋譜選択に戻る</button>
+      <button class="btn-danger" id="btn-study-back" onclick="showScreen('s-select')">← 棋譜選択に戻る</button>
     </div>
   </div>
 </div>
@@ -526,6 +535,14 @@ let quizBoardMoves = [];
 let quizCurrentColor = "black";
 let hoverCell = null;
 let scores = [];
+let gameMode = 'game'; // 'game' | 'challenge' | 'ai'
+
+// URLパラメータからモードを取得
+(function() {
+  const p = new URLSearchParams(window.location.search);
+  if (p.get('mode') === 'challenge') gameMode = 'challenge';
+  else if (p.get('mode') === 'ai') gameMode = 'ai';
+})();
 
 try { scores = JSON.parse(localStorage.getItem("igo_scores") || "[]"); } catch {}
 
@@ -677,6 +694,34 @@ function goToGradeSelect(k) {
 }
 
 renderTopKifuList();
+initMode();
+
+// モード初期化
+function initMode() {
+  const titleEl = document.getElementById('top-mode-title');
+  const subEl = document.getElementById('top-mode-sub');
+  const listEl = document.getElementById('top-kifu-list');
+  const challengeEl = document.getElementById('challenge-start-area');
+  if (gameMode === 'challenge') {
+    titleEl.textContent = '🎲 チャレンジモード';
+    subEl.textContent = 'ランダム棋譜 → 記憶 → 再現 → 採点';
+    listEl.style.display = 'none';
+    challengeEl.style.display = 'block';
+  } else if (gameMode === 'ai') {
+    titleEl.textContent = '🤖 AI検討モード';
+    subEl.textContent = '棋譜を選択 → AI研究（時間制限なし・採点なし）';
+  } else {
+    titleEl.textContent = '囲碁棋譜記憶力ゲーム';
+    subEl.textContent = '棋譜を選択 → 記憶 → 再現 → 採点　全40局収録';
+  }
+}
+
+// チャレンジモード：ランダム棋譜選択
+function startChallenge() {
+  if (kifuList.length === 0) return;
+  const k = kifuList[Math.floor(Math.random() * kifuList.length)];
+  if (playerName) { goToGradeSelect(k); } else { startStudyDirect(k); }
+}
 
 // スコア記録のベスト更新（グレード別）
 function saveBestScore(kifuId, grade, score) {
@@ -842,16 +887,38 @@ function startStudy(k) {
   studyTimeLeft = 180;
   document.getElementById('study-title').textContent = k.title;
   document.getElementById('study-players').textContent = `${k.black} vs ${k.white}`;
+
+  // モード別UI切り替え
+  const btnComplete = document.getElementById('btn-study-complete');
+  const btnAI = document.getElementById('btn-ai-research');
+  const timerEl = document.getElementById('study-timer');
+
+  if (gameMode === 'ai') {
+    // AI検討モード：タイマーなし・クイズなし・AI常時表示
+    btnComplete.style.display = 'none';
+    btnAI.style.display = 'inline-block';
+    timerEl.style.display = 'none';
+  } else {
+    // ゲーム・チャレンジモード：通常表示
+    btnComplete.style.display = 'inline-block';
+    btnComplete.textContent = '記憶完了 → クイズへ';
+    btnAI.style.display = 'none';
+    timerEl.style.display = '';
+  }
+
   updateStudyTimer();
   drawStudyBoard();
   updateStudyControls();
   showScreen('s-study');
   clearInterval(studyTimer);
-  studyTimer = setInterval(() => {
-    studyTimeLeft--;
-    updateStudyTimer();
-    if (studyTimeLeft <= 0) { clearInterval(studyTimer); startQuiz(); }
-  }, 1000);
+
+  if (gameMode !== 'ai') {
+    studyTimer = setInterval(() => {
+      studyTimeLeft--;
+      updateStudyTimer();
+      if (studyTimeLeft <= 0) { clearInterval(studyTimer); startQuiz(); }
+    }, 1000);
+  }
 }
 
 function updateStudyTimer() {
@@ -1281,7 +1348,7 @@ window.showScreen = function(id) {
     // チャレンジ回数を最新化
     loadChallengeCount();
   }
-  if (id === 's-upload') { renderTopKifuList(); loadChallengeCount(); }
+  if (id === 's-upload') { renderTopKifuList(); loadChallengeCount(); initMode(); }
 };
 
 // 初期チェック完了（棋譜データは内蔵済み）
