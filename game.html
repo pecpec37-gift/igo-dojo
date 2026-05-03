@@ -824,9 +824,9 @@ function drawBoard(canvasId, moves, opts={}) {
       ctx.fillText(COLS19[i], p, MARGIN + (BOARD_SIZE - 1) * CELL + MARGIN * 0.52);
       // 行ラベル（19〜1）
       ctx.textAlign = 'right';
-      ctx.fillText(BOARD_SIZE - i, MARGIN * 0.46, p);
+      ctx.fillText(i + 1, MARGIN * 0.46, p);
       ctx.textAlign = 'left';
-      ctx.fillText(BOARD_SIZE - i, MARGIN + (BOARD_SIZE - 1) * CELL + MARGIN * 0.54, p);
+      ctx.fillText(i + 1, MARGIN + (BOARD_SIZE - 1) * CELL + MARGIN * 0.54, p);
       ctx.textAlign = 'center';
     }
   }
@@ -1470,9 +1470,9 @@ function drawAIBoard(candidates) {
     ctx.fillText(COLS19[i], p, MARGIN * 0.48);
     ctx.fillText(COLS19[i], p, MARGIN + (BOARD_SIZE-1)*CELL + MARGIN * 0.52);
     ctx.textAlign = 'right';
-    ctx.fillText(BOARD_SIZE - i, MARGIN * 0.46, p);
+    ctx.fillText(i + 1, MARGIN * 0.46, p);
     ctx.textAlign = 'left';
-    ctx.fillText(BOARD_SIZE - i, MARGIN + (BOARD_SIZE-1)*CELL + MARGIN * 0.54, p);
+    ctx.fillText(i + 1, MARGIN + (BOARD_SIZE-1)*CELL + MARGIN * 0.54, p);
     ctx.textAlign = 'center';
   }
 
@@ -1520,8 +1520,8 @@ function boardToText() {
   let text = '   ';
   for (let c = 0; c < 19; c++) text += COLS19[c] + ' ';
   text += '\n';
-  for (let r = 0; r < 19; r++) {
-    text += String(19 - r).padStart(2) + ' ' + grid[r].join(' ') + '\n';
+  for (let r = 18; r >= 0; r--) {
+    text += String(r + 1).padStart(2) + ' ' + grid[r].join(' ') + '\n';
   }
 
   // 棋譜の手順（直近10手を表示）
@@ -1549,7 +1549,7 @@ function coordToIdx(coord) {
   const colChar = coord[0].toUpperCase();
   const rowNum = parseInt(coord.slice(1));
   const col_idx = COLS19.indexOf(colChar);
-  const row_idx = 19 - rowNum;
+  const row_idx = rowNum - 1;  // 行1=下端=index0
   if (col_idx < 0 || isNaN(row_idx) || row_idx < 0 || row_idx > 18) return null;
   return { col_idx, row_idx };
 }
