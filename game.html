@@ -1517,14 +1517,24 @@ function boardToText() {
   const grid = Array.from({length: 19}, () => Array(19).fill('.'));
   moves.forEach(({col, row, color}) => { grid[row][col] = color === 'black' ? '●' : '○'; });
 
-  let text = '   ';
+  // 盤面テキスト（行19=上辺、行1=下辺）
+  let text = '     ';
   for (let c = 0; c < 19; c++) text += COLS19[c] + ' ';
   text += '\n';
   for (let r = 18; r >= 0; r--) {
-    text += String(r + 1).padStart(2) + ' ' + grid[r].join(' ') + '\n';
+    text += String(r + 1).padStart(2) + ' [' + grid[r].join('') + ']\n';
   }
 
-  // 棋譜の手順（直近10手を表示）
+  // 着手済みの座標リスト（AIが間違えないよう明示）
+  const blackStones = [];
+  const whiteStones = [];
+  moves.forEach(({col, row, color}) => {
+    const coord = COLS19[col] + (row + 1);
+    if (color === 'black') blackStones.push(coord);
+    else whiteStones.push(coord);
+  });
+
+  // 棋譜の手順（直近10手）
   const recentMoves = currentKifu.moves.slice(0, studyMove);
   const start = Math.max(0, recentMoves.length - 10);
   const recent = recentMoves.slice(start).map((mv, i) => {
@@ -1538,8 +1548,18 @@ function boardToText() {
 直近の手順：${recent}
 次の手番：${nextColor}番
 
-現在の盤面（●=黒、○=白、.=空）：
-${text}`;
+【座標系の説明】
+・列：左からA B C D E F G H J K L M N O P Q R S T（Iは使用しない）
+・行：下辺が1、上辺が19（行19=上辺、行1=下辺）
+・例：左上隅=A19、右上隅=T19、左下隅=A1、右下隅=T1
+
+【現在の石の配置】
+黒石（${blackStones.length}個）：${blackStones.join(' ')}
+白石（${whiteStones.length}個）：${whiteStones.join(' ')}
+
+【盤面図（行19=上辺 → 行1=下辺）】
+${text}
+⚠️ 重要：候補手は必ず上記の黒石・白石が置かれていない空点を選んでください。`;
 }
 
 // 座標文字列→インデックス変換
@@ -1564,16 +1584,22 @@ async function runAIAnalysis() {
   const boardText = boardToText();
   const nextColor = studyMove % 2 === 0 ? '黒' : '白';
 
-  const prompt = `あなたはプロレベルの囲碁解説者です。以下の盤面を見て、次の${nextColor}番の有力手を3つ提案し、それぞれの棋理を日本語で解説してください。
+  const prompt = `あなたはプロレベルの囲碁解説者です。以下の盤面を見て、次の${nextColor}番の有力手を3つ提案してください。
 
 ${boardText}
+
+【厳守事項】
+1. 候補手は必ず「空点」に着手すること（黒石・白石が既にある場所は絶対に選ばない）
+2. 座標は列（A〜T、Iなし）＋行（1〜19）の形式で記載（例：R16、Q3、D4）
+3. 上辺・下辺の表現は盤面図の向きに合わせること（行19=上辺、行1=下辺）
+4. 解説文中の方向表現（上辺・下辺・左辺・右辺）を正確に使うこと
 
 以下のJSON形式のみで回答してください（他のテキストは一切不要）：
 {
   "situation": "現在の局面の概況（2〜3文、${nextColor}番の視点で）",
   "candidates": [
     {
-      "coord": "座標（例：R16）",
+      "coord": "空点の座標（例：R16）",
       "label": "手の名前・方針（10文字以内）",
       "rating": "★★★ / ★★☆ / ★☆☆",
       "explanation": "この手の棋理と狙い（50〜80文字）"
