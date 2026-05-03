@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>棋譜記憶力ゲーム — 囲碁棋譜道場</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='12' fill='%23c8a84b'/><circle cx='35' cy='50' r='22' fill='%23111'/><circle cx='65' cy='50' r='22' fill='%23f0f0f0' stroke='%23999' stroke-width='1.5'/></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;700&display=swap" rel="stylesheet">
 <style>
   .site-header {
@@ -258,7 +259,7 @@
 
 <!-- 棋譜学習 -->
 <div class="screen" id="s-study">
-  <div class="card" style="max-width:420px">
+  <div class="card" style="max-width:min(680px,96vw);width:100%">
     <div class="row" style="justify-content:space-between;margin-bottom:8px">
       <div>
         <div id="study-title" style="color:#e8c964;font-weight:700;font-size:13px"></div>
@@ -302,7 +303,7 @@
 
 <!-- クイズ -->
 <div class="screen" id="s-quiz">
-  <div class="card" style="max-width:420px">
+  <div class="card" style="max-width:min(680px,96vw);width:100%">
     <div class="row" style="justify-content:space-between;margin-bottom:6px">
       <div>
         <div id="quiz-move-label" style="color:#e8c964;font-weight:700;font-size:13px"></div>
@@ -1374,7 +1375,23 @@ window.showScreen = function(id) {
 
 // 初期チェック完了（棋譜データは内蔵済み）
 
-// ===== AI研究モード =====
+// ===== 盤面サイズを画面に合わせて動的調整 =====
+function resizeBoards() {
+  // 利用可能な幅からカードのpadding(48px)を引いた値、最大640px
+  const available = Math.min(window.innerWidth * 0.96 - 48, 640);
+  const size = Math.floor(Math.max(available, 280)); // 最小280px
+  ['study-board', 'quiz-board'].forEach(id => {
+    const c = document.getElementById(id);
+    if (c) { c.width = size; c.height = size; }
+  });
+  // AI研究モーダルの盤面も調整（モーダル最大640px、padding48px）
+  const aiSize = Math.floor(Math.min(available * 0.85, 420));
+  const aiBoard = document.getElementById('ai-board');
+  if (aiBoard) { aiBoard.width = aiSize; aiBoard.height = aiSize; }
+}
+resizeBoards();
+window.addEventListener('resize', () => { resizeBoards(); if(currentKifu) drawStudyBoard(); });
+
 let aiCandidates = []; // 現在の候補手（盤面オーバーレイ用）
 
 function closeAIResearch() {
