@@ -1517,12 +1517,16 @@ function boardToText() {
   const grid = Array.from({length: 19}, () => Array(19).fill('.'));
   moves.forEach(({col, row, color}) => { grid[row][col] = color === 'black' ? '●' : '○'; });
 
-  // 盤面テキスト（行19=上辺、行1=下辺）
+  // 盤面テキスト（テキストの上=行1=下辺、テキストの下=行19=上辺 とAIに明示）
+  // AIはテキストを上から読むため、行1を上に置くと「上辺=1段目」と誤認する。
+  // そこで行19を上に置き、「テキスト上端=上辺=行19」と明示する。
   let text = '     ';
   for (let c = 0; c < 19; c++) text += COLS19[c] + ' ';
-  text += '\n';
+  text += '  ← 列\n';
   for (let r = 18; r >= 0; r--) {
-    text += String(r + 1).padStart(2) + ' [' + grid[r].join('') + ']\n';
+    const rowLabel = String(r + 1).padStart(2);
+    const side = r === 18 ? ' ← 上辺' : r === 0 ? ' ← 下辺' : '';
+    text += rowLabel + ' [' + grid[r].join('') + ']' + side + '\n';
   }
 
   // 着手済みの座標リスト（AIが間違えないよう明示）
@@ -1550,8 +1554,9 @@ function boardToText() {
 
 【座標系の説明】
 ・列：左からA B C D E F G H J K L M N O P Q R S T（Iは使用しない）
-・行：下辺が1、上辺が19（行19=上辺、行1=下辺）
-・例：左上隅=A19、右上隅=T19、左下隅=A1、右下隅=T1
+・行：行19=上辺（盤面図の一番上の行）、行1=下辺（盤面図の一番下の行）
+・盤面図では行19が最初の行（上）、行1が最後の行（下）に表示されています
+・例：左上隅=A19（上辺左）、右上隅=T19（上辺右）、左下隅=A1（下辺左）、右下隅=T1（下辺右）
 
 【現在の石の配置】
 黒石（${blackStones.length}個）：${blackStones.join(' ')}
