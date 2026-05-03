@@ -810,6 +810,27 @@ function drawBoard(canvasId, moves, opts={}) {
     ctx.beginPath();ctx.moveTo(p,MARGIN);ctx.lineTo(p,MARGIN+(BOARD_SIZE-1)*CELL);ctx.stroke();
     ctx.beginPath();ctx.moveTo(MARGIN,p);ctx.lineTo(MARGIN+(BOARD_SIZE-1)*CELL,p);ctx.stroke();
   }
+  // 座標ラベル（opts.showCoords === true のとき表示）
+  if (opts.showCoords) {
+    const COLS19 = 'ABCDEFGHJKLMNOPQRST';
+    ctx.fillStyle = '#5C3D11';
+    ctx.font = `${Math.round(CELL * 0.36)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i < BOARD_SIZE; i++) {
+      const p = MARGIN + i * CELL;
+      // 列ラベル（A〜T、Iなし）
+      ctx.fillText(COLS19[i], p, MARGIN * 0.48);
+      ctx.fillText(COLS19[i], p, MARGIN + (BOARD_SIZE - 1) * CELL + MARGIN * 0.52);
+      // 行ラベル（19〜1）
+      ctx.textAlign = 'right';
+      ctx.fillText(BOARD_SIZE - i, MARGIN * 0.46, p);
+      ctx.textAlign = 'left';
+      ctx.fillText(BOARD_SIZE - i, MARGIN + (BOARD_SIZE - 1) * CELL + MARGIN * 0.54, p);
+      ctx.textAlign = 'center';
+    }
+  }
+
   // 星
   ctx.fillStyle="#5C3D11";
   for (const r of [3,9,15]) for (const c of [3,9,15]) { ctx.beginPath();ctx.arc(MARGIN+c*CELL,MARGIN+r*CELL,2.5,0,Math.PI*2);ctx.fill(); }
@@ -930,7 +951,7 @@ function updateStudyTimer() {
 
 function drawStudyBoard() {
   const moves = buildBoard(currentKifu, studyMove);
-  drawBoard('study-board', moves);
+  drawBoard('study-board', moves, { showCoords: gameMode === 'ai' });
   const pct = (studyMove / studyMaxMove * 100).toFixed(1);
   document.getElementById('study-progress').style.width = pct + '%';
   const infoEl = document.getElementById('study-move-info');
@@ -1437,6 +1458,22 @@ function drawAIBoard(candidates) {
   ctx.fillStyle = '#5C3D11';
   for (const r of [3,9,15]) for (const c of [3,9,15]) {
     ctx.beginPath(); ctx.arc(MARGIN+c*CELL, MARGIN+r*CELL, 2.5, 0, Math.PI*2); ctx.fill();
+  }
+
+  // 座標ラベル
+  const COLS19 = 'ABCDEFGHJKLMNOPQRST';
+  ctx.fillStyle = '#5C3D11';
+  ctx.font = `${Math.round(CELL * 0.36)}px sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let i = 0; i < BOARD_SIZE; i++) {
+    const p = MARGIN + i * CELL;
+    ctx.fillText(COLS19[i], p, MARGIN * 0.48);
+    ctx.fillText(COLS19[i], p, MARGIN + (BOARD_SIZE-1)*CELL + MARGIN * 0.52);
+    ctx.textAlign = 'right';
+    ctx.fillText(BOARD_SIZE - i, MARGIN * 0.46, p);
+    ctx.textAlign = 'left';
+    ctx.fillText(BOARD_SIZE - i, MARGIN + (BOARD_SIZE-1)*CELL + MARGIN * 0.54, p);
+    ctx.textAlign = 'center';
   }
 
   const moves = buildBoard(currentKifu, studyMove);
