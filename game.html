@@ -61,6 +61,7 @@
   .feedback-overlay.show { display: block; }
   .scroll-list { max-height: 65vh; overflow-y: auto; }
 </style>
+<script src="https://pecpec37-gift.github.io/portal/stamp.js"></script>
 </head>
 <body>
 
@@ -1719,6 +1720,78 @@ ${boardText}
     document.getElementById('ai-analyze-btn-area').style.display = 'block';
   }
 }
+</script>
+<!-- ⭐ スタンプ送信（とみやんのゲームランド） -->
+<script>
+(function() {
+  var GAME_ID = 'igo-dojo';
+
+  window.addEventListener('load', function() {
+
+    // ---- プレーヤー名の自動セット ----
+    var _origShowScreen = window.showScreen;
+    if (typeof _origShowScreen === 'function') {
+      window.showScreen = function(id) {
+        _origShowScreen(id);
+        if (id === 's-name') {
+          setTimeout(function() {
+            var inp = document.querySelector('#s-name input[type=text], #s-name input:not([type])');
+            if (inp && window.TomyStamp) {
+              var saved = TomyStamp.getPlayer();
+              if (saved && !inp.value) inp.value = saved;
+            }
+          }, 80);
+        }
+      };
+    }
+
+    // ---- スタンプ送信：finishQuiz をフック ----
+    var _origFinishQuiz = window.finishQuiz;
+    if (typeof _origFinishQuiz === 'function') {
+      window.finishQuiz = function() {
+        var ret = _origFinishQuiz.apply(this, arguments);
+        setTimeout(sendStamp, 500);
+        return ret;
+      };
+    }
+  });
+
+  function sendStamp() {
+    if (!window.TomyStamp) return;
+
+    // プレーヤー名
+    var player = (typeof playerName === 'string' && playerName)
+      ? playerName : TomyStamp.getPlayer();
+    if (player) TomyStamp.setPlayer(player);
+    if (!player) return;
+
+    // スコアと最高点（グレードによって異なる）
+    var qs = (typeof quizScore === 'number') ? quizScore : 0;
+    var grade = (typeof selectedGrade === 'string') ? selectedGrade : '上級';
+    var maxScore = grade === '初級' ? 50 : grade === '中級' ? 100 : 200;
+    var pct = maxScore > 0 ? qs / maxScore : 0;
+
+    // 棋譜名
+    var genreName = (typeof currentKifu !== 'undefined' && currentKifu && currentKifu.title)
+      ? currentKifu.title : '囲碁棋譜';
+
+    console.log('[stamp] player=' + player + ' score=' + qs + '/' + maxScore + ' (' + Math.round(pct*100) + '%) grade=' + grade);
+
+    // 90%以上でスタンプ獲得
+    if (pct >= 0.9) {
+      TomyStamp.send(GAME_ID, genreName, 9).then(function(r) {
+        if (r.ok) {
+          console.log('[⭐ stamp] 獲得! score=' + qs + '/' + maxScore);
+          var toast = document.createElement('div');
+          toast.textContent = '⭐ スタンプ獲得！ランキングに反映されます';
+          toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#f0d060;padding:10px 20px;border-radius:4px;font-size:13px;z-index:9999;border:1px solid rgba(240,208,96,0.4);white-space:nowrap;';
+          document.body.appendChild(toast);
+          setTimeout(function() { document.body.removeChild(toast); }, 3000);
+        }
+      });
+    }
+  }
+})();
 </script>
 </body>
 </html>
