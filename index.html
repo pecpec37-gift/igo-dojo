@@ -53,7 +53,7 @@
     font-size: 15px; font-weight: 700; color: var(--gold-light);
     letter-spacing: 3px; text-decoration: none;
   }
-  nav { display: flex; gap: 8px; }
+  nav { display: flex; gap: 8px; align-items: center; }
   nav a {
     color: var(--text-muted); font-size: 12px; text-decoration: none;
     padding: 6px 14px; border-radius: 6px;
@@ -61,6 +61,14 @@
     transition: color 0.2s, border-color 0.2s;
   }
   nav a:hover { color: var(--gold-light); border-color: var(--border); }
+  nav button {
+    background: none; cursor: pointer; font-size: 12px; padding: 4px 9px;
+    border-radius: 6px; border: 2px solid transparent;
+    color: var(--text-muted); font-family: 'Noto Serif JP', serif;
+    transition: all 0.2s; font-weight: 400;
+  }
+  nav button:hover { color: var(--gold-light); border-color: var(--border); }
+  nav button.lang-active { color: var(--gold-light); border-color: rgba(200,168,75,0.7); font-weight: 700; }
 
   /* ── ヒーロー ── */
   .hero {
@@ -299,23 +307,35 @@
 <!-- ヘッダー -->
 <header>
   <a class="logo" href="index.html">⚫ 囲碁棋譜道場</a>
-  <nav></nav>
+  <nav id="lang-nav-index">
+    <button id="idx-ja" onclick="setLang('ja')" class="lang-active" title="日本語">JP</button>
+    <button id="idx-en" onclick="setLang('en')" title="English">EN</button>
+    <button id="idx-zh" onclick="setLang('zh')" title="中文">中</button>
+    <button id="idx-ko" onclick="setLang('ko')" title="한국어">한</button>
+  </nav>
 </header>
 
 <!-- ヒーロー -->
 <div class="hero">
   <div class="hero-inner">
     <div class="hero-kamon fade-in">⚫⚪</div>
-    <h1 class="hero-title fade-in">囲碁棋譜道場</h1>
-    <p class="hero-subtitle fade-in">KIFU MEMORY GAME</p>
-    <p class="hero-desc fade-in">
+    <!-- 言語選択ボタン（ヒーロー内） -->
+    <div class="fade-in" style="display:flex;gap:8px;justify-content:center;margin-bottom:20px;flex-wrap:wrap">
+      <button onclick="setLang('ja')" id="hero-ja" style="background:linear-gradient(135deg,#92703a,#c8a84b);color:#0a0a0f;font-family:'Noto Serif JP',serif;font-size:13px;font-weight:700;padding:8px 18px;border-radius:8px;border:none;cursor:pointer;transition:opacity .2s">日本語</button>
+      <button onclick="setLang('en')" id="hero-en" style="background:rgba(255,255,255,0.07);color:#e8d5a3;font-family:'Noto Serif JP',serif;font-size:13px;padding:8px 18px;border-radius:8px;border:1px solid rgba(200,168,75,0.3);cursor:pointer;transition:all .2s">English</button>
+      <button onclick="setLang('zh')" id="hero-zh" style="background:rgba(255,255,255,0.07);color:#e8d5a3;font-family:'Noto Serif JP',serif;font-size:13px;padding:8px 18px;border-radius:8px;border:1px solid rgba(200,168,75,0.3);cursor:pointer;transition:all .2s">中文</button>
+      <button onclick="setLang('ko')" id="hero-ko" style="background:rgba(255,255,255,0.07);color:#e8d5a3;font-family:'Noto Serif JP',serif;font-size:13px;padding:8px 18px;border-radius:8px;border:1px solid rgba(200,168,75,0.3);cursor:pointer;transition:all .2s">한국어</button>
+    </div>
+    <h1 class="hero-title fade-in" id="idx-title">囲碁棋譜道場</h1>
+    <p class="hero-subtitle fade-in" id="idx-subtitle">KIFU MEMORY GAME</p>
+    <p class="hero-desc fade-in" id="idx-desc">
       プロ棋士の名局を手順で記憶し、次の一手を当てるトレーニング。<br>
       初心者から高段者まで、全レベルに対応した棋力向上ゲームです。
     </p>
     <div class="hero-btns fade-in">
-      <a href="game.html?mode=game" class="btn-primary">▶ ゲーム</a>
-      <a href="game.html?mode=challenge" class="btn-secondary">▶ チャレンジ</a>
-      <a href="game.html?mode=ai" class="btn-secondary">▶ AI検討 <span style="font-size:11px;opacity:0.7">（工事中）</span></a>
+      <a href="game.html?mode=game" class="btn-primary" id="idx-btn-game">▶ ゲーム</a>
+      <a href="game.html?mode=challenge" class="btn-secondary" id="idx-btn-challenge">▶ チャレンジ</a>
+      <a href="game.html?mode=ai" class="btn-secondary" id="idx-btn-ai">▶ AI検討 <span style="font-size:11px;opacity:0.7">（工事中）</span></a>
     </div>
   </div>
 </div>
@@ -418,6 +438,92 @@
 <footer>
   <p>⚫⚪ &nbsp; <span>囲碁棋譜道場</span> &nbsp; — &nbsp; 棋力向上トレーニングサイト</p>
 </footer>
+
+<script>
+// ===== index.html 多言語対応 =====
+const IDX_I18N = {
+  ja: {
+    siteTitle: '⚫ 囲碁棋譜道場',
+    title: '囲碁棋譜道場',
+    subtitle: 'KIFU MEMORY GAME',
+    desc: 'プロ棋士の名局を手順で記憶し、次の一手を当てるトレーニング。<br>初心者から高段者まで、全レベルに対応した棋力向上ゲームです。',
+    btnGame: '▶ ゲーム', btnChallenge: '▶ チャレンジ', btnAI: '▶ AI検討',
+  },
+  en: {
+    siteTitle: '⚫ Go Kifu Dojo',
+    title: 'Go Kifu Dojo',
+    subtitle: 'KIFU MEMORY GAME',
+    desc: 'Memorize pro game records and guess the next move.<br>For all levels, from beginners to advanced players.',
+    btnGame: '▶ Play', btnChallenge: '▶ Challenge', btnAI: '▶ AI Analysis',
+  },
+  zh: {
+    siteTitle: '⚫ 围棋棋谱道场',
+    title: '围棋棋谱道场',
+    subtitle: 'KIFU MEMORY GAME',
+    desc: '记忆职业棋手的棋谱，猜测下一手。<br>适合所有级别，从入门到高段位。',
+    btnGame: '▶ 游戏', btnChallenge: '▶ 挑战', btnAI: '▶ AI研究',
+  },
+  ko: {
+    siteTitle: '⚫ 바둑 기보 도장',
+    title: '바둑 기보 도장',
+    subtitle: 'KIFU MEMORY GAME',
+    desc: '프로 기사의 기보를 기억하고 다음 수를 맞추는 트레이닝.<br>초보자부터 고단자까지 모든 레벨에 대응합니다.',
+    btnGame: '▶ 게임', btnChallenge: '▶ 챌린지', btnAI: '▶ AI 검토',
+  }
+};
+
+function setLang(lang) {
+  localStorage.setItem('igo_lang', lang);
+  const t = IDX_I18N[lang];
+
+  // ロゴ
+  const logo = document.querySelector('.logo');
+  if(logo) logo.textContent = t.siteTitle;
+
+  // ヒーロー
+  const title = document.getElementById('idx-title');
+  if(title) title.textContent = t.title;
+  const subtitle = document.getElementById('idx-subtitle');
+  if(subtitle) subtitle.textContent = t.subtitle;
+  const desc = document.getElementById('idx-desc');
+  if(desc) desc.innerHTML = t.desc;
+  const btnGame = document.getElementById('idx-btn-game');
+  if(btnGame) btnGame.textContent = t.btnGame;
+  const btnChal = document.getElementById('idx-btn-challenge');
+  if(btnChal) btnChal.textContent = t.btnChallenge;
+  const btnAI = document.getElementById('idx-btn-ai');
+  if(btnAI) btnAI.innerHTML = t.btnAI + ' <span style="font-size:11px;opacity:0.7">（工事中）</span>';
+
+  // ヘッダーボタンのハイライト
+  ['ja','en','zh','ko'].forEach(l => {
+    const hBtn = document.getElementById('idx-'+l);
+    if(hBtn) {
+      hBtn.classList.toggle('lang-active', l===lang);
+    }
+    // ヒーローボタン
+    const heroBtn = document.getElementById('hero-'+l);
+    if(heroBtn) {
+      if(l===lang) {
+        heroBtn.style.background = 'linear-gradient(135deg,#92703a,#c8a84b)';
+        heroBtn.style.color = '#0a0a0f';
+        heroBtn.style.border = 'none';
+        heroBtn.style.fontWeight = '700';
+      } else {
+        heroBtn.style.background = 'rgba(255,255,255,0.07)';
+        heroBtn.style.color = '#e8d5a3';
+        heroBtn.style.border = '1px solid rgba(200,168,75,0.3)';
+        heroBtn.style.fontWeight = '400';
+      }
+    }
+  });
+}
+
+// 保存済み言語を復元
+(function() {
+  const saved = localStorage.getItem('igo_lang') || 'ja';
+  setLang(saved);
+})();
+</script>
 <!-- ポータルに戻るボタン -->
 <style>
 .portal-back-btn {
