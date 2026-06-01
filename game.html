@@ -152,7 +152,12 @@
 <!-- サイトヘッダー -->
 <header class="site-header">
   <a class="site-logo" href="index.html">⚫ 囲碁棋譜道場</a>
-  <nav class="site-nav"></nav>
+  <nav class="site-nav" id="lang-nav" style="display:flex;gap:4px;">
+    <button onclick="applyLang('ja')" id="flag-ja" style="background:none;border:2px solid transparent;border-radius:6px;cursor:pointer;font-size:20px;padding:2px 5px;transition:border-color .2s" title="日本語">🇯🇵</button>
+    <button onclick="applyLang('en')" id="flag-en" style="background:none;border:2px solid transparent;border-radius:6px;cursor:pointer;font-size:20px;padding:2px 5px;transition:border-color .2s" title="English">🇺🇸</button>
+    <button onclick="applyLang('zh')" id="flag-zh" style="background:none;border:2px solid transparent;border-radius:6px;cursor:pointer;font-size:20px;padding:2px 5px;transition:border-color .2s" title="中文">🇨🇳</button>
+    <button onclick="applyLang('ko')" id="flag-ko" style="background:none;border:2px solid transparent;border-radius:6px;cursor:pointer;font-size:20px;padding:2px 5px;transition:border-color .2s" title="한국어">🇰🇷</button>
+  </nav>
 </header>
 
 <!-- トップ画面（棋譜選択） -->
@@ -377,6 +382,413 @@
 </div>
 
 <script>
+// ===== 多言語対応 =====
+const I18N = {
+  ja: {
+    langFont: "'Noto Serif JP', serif",
+    siteTitle: "⚫ 囲碁棋譜道場",
+    gameTitle: "囲碁棋譜記憶力ゲーム",
+    gameSub: "棋譜を選択 → 記憶 → 再現 → 採点　全40局収録",
+    challengeLoading: "累計チャレンジ回数：読み込み中...",
+    challengeCount: (n) => `累計チャレンジ回数：${n} 回`,
+    scoreBtn: "🏆 スコア一覧",
+    playerTitle: "プレーヤー名",
+    playerSub: "あなたの名前を入力してください",
+    playerPlaceholder: "例：山田太郎",
+    nextBtn: "次へ",
+    backToKifu: "← 棋譜を変更",
+    selectTitle: "棋譜を選択",
+    backToList: "← 棋譜一覧に戻る",
+    gradeTitle: "グレードを選択",
+    backToSelect: "← 棋譜選択に戻る",
+    gradeAdv: "上級", gradeAdvHint: "ヒントなし", gradeAdvPt: "正解時 3点/問", gradeAdvMax: "最高 150点",
+    gradeMid: "中級", gradeMidHint: "ヒントあり 3択", gradeMidPt: "正解時 2点/問", gradeMidMax: "最高 100点",
+    gradeBeg: "初級", gradeBegHint: "ヒントあり 2択", gradeBegPt: "正解時 1点/問", gradeBegMax: "最高 50点",
+    studyInfo: "👉 「次 ▶」ボタンを押して棋譜を記憶してください",
+    prev5: "5手◀◀", prevBtn: "◀ 前", nextStudy: "次 ▶", next5: "▶▶5手",
+    studyComplete: "記憶完了 → クイズへ",
+    aiResearch: "🤖 AI研究モード — 有力手を分析",
+    backToSelectDanger: "← 棋譜選択に戻る",
+    hintClick: "をクリック",
+    hintBtn: "💡 ヒントを見る",
+    abortBtn: "終了して記録",
+    quizInstruction: "碁盤をクリックして答える",
+    resultTitle: "結果発表",
+    resultPerfect: "🎉 完璧！50手全問正解！",
+    playAgain: "もう一度",
+    scoreListBtn: "🏆 スコア一覧",
+    changeKifu: "棋譜を変更",
+    rankTitle: "🏆 スコアランキング",
+    rankLocal: "このデバイス",
+    rankGlobal: "みんなのスコア",
+    rankAdv: "上級", rankMid: "中級", rankBeg: "初級",
+    rankAdvSub: "上級：最高150点", rankMidSub: "中級：最高100点", rankBegSub: "初級：最高50点",
+    selectKifuBtn: "棋譜を選ぶ",
+    levelAdv: "上級", levelMid: "中級", levelBeg: "初級",
+    noRecord: "まだ記録がありません",
+    black: "⚫", white: "⚪",
+    moveCount: (n,m) => `第${n}手：`,
+    colorBlack: "⚫ 黒", colorWhite: "⚪ 白",
+    notPlayed: "未プレイ", best: "Best",
+    halfway: (n) => `${n}手(途中)　`, allMoves: "全50手　",
+    resultAnswered: (n,mx) => n<50 ? `${n}手まで回答（途中終了）` : `50手全問回答　最高${mx}点`,
+    selectSub: (name) => `プレーヤー：${name}　│　50手を3分以内に記憶`,
+    // 棋譜タイトル翻訳（id -> 表示名）
+    titles: {}
+  },
+  en: {
+    langFont: "Georgia, serif",
+    siteTitle: "⚫ Go Kifu Dojo",
+    gameTitle: "Go Game Memory Challenge",
+    gameSub: "Select → Memorize → Reproduce → Score　40 Games",
+    challengeLoading: "Total challenges: Loading...",
+    challengeCount: (n) => `Total challenges: ${n}`,
+    scoreBtn: "🏆 Rankings",
+    playerTitle: "Player Name",
+    playerSub: "Enter your name",
+    playerPlaceholder: "e.g. John",
+    nextBtn: "Next",
+    backToKifu: "← Change Game",
+    selectTitle: "Select Game",
+    backToList: "← Back to List",
+    gradeTitle: "Select Grade",
+    backToSelect: "← Back to Select",
+    gradeAdv: "Advanced", gradeAdvHint: "No hints", gradeAdvPt: "3 pts/move", gradeAdvMax: "Max 150 pts",
+    gradeMid: "Intermediate", gradeMidHint: "3-choice hint", gradeMidPt: "2 pts/move", gradeMidMax: "Max 100 pts",
+    gradeBeg: "Beginner", gradeBegHint: "2-choice hint", gradeBegPt: "1 pt/move", gradeBegMax: "Max 50 pts",
+    studyInfo: "👉 Press 「Next ▶」 to memorize the game",
+    prev5: "◀◀5", prevBtn: "◀ Prev", nextStudy: "Next ▶", next5: "5▶▶",
+    studyComplete: "Memorized → Start Quiz",
+    aiResearch: "🤖 AI Analysis Mode",
+    backToSelectDanger: "← Back to Select",
+    hintClick: "click",
+    hintBtn: "💡 Show Hint",
+    abortBtn: "Finish & Save",
+    quizInstruction: "Click the board to answer",
+    resultTitle: "Results",
+    resultPerfect: "🎉 Perfect! All 50 moves correct!",
+    playAgain: "Play Again",
+    scoreListBtn: "🏆 Rankings",
+    changeKifu: "Change Game",
+    rankTitle: "🏆 Score Rankings",
+    rankLocal: "This Device",
+    rankGlobal: "Global",
+    rankAdv: "Advanced", rankMid: "Intermediate", rankBeg: "Beginner",
+    rankAdvSub: "Advanced: Max 150 pts", rankMidSub: "Intermediate: Max 100 pts", rankBegSub: "Beginner: Max 50 pts",
+    selectKifuBtn: "Select Game",
+    levelAdv: "Advanced", levelMid: "Intermediate", levelBeg: "Beginner",
+    noRecord: "No records yet",
+    black: "⚫", white: "⚪",
+    moveCount: (n,m) => `Move ${n}: `,
+    colorBlack: "⚫ Black", colorWhite: "⚪ White",
+    notPlayed: "Not played", best: "Best",
+    halfway: (n) => `${n} moves (partial)　`, allMoves: "All 50 moves　",
+    resultAnswered: (n,mx) => n<50 ? `Answered ${n} moves (incomplete)` : `All 50 moves answered　Max ${mx} pts`,
+    selectSub: (name) => `Player: ${name}　│　Memorize 50 moves in 3 min`,
+    titles: {
+      "第01局": "Game 01", "第02局": "Game 02", "第03局": "Game 03", "第04局": "Game 04",
+      "第05局": "Game 05", "第06局": "Game 06", "第07局": "Game 07", "第08局": "Game 08",
+      "第09局": "Game 09", "第10局": "Game 10", "第11局": "Game 11", "第12局": "Game 12",
+      "第13局": "Game 13", "第14局": "Game 14", "第15局": "Game 15", "第16局": "Game 16",
+      "第17局": "Game 17", "第18局": "Game 18", "第19局": "Game 19", "第20局": "Game 20",
+      "三連星": "San-rensei", "二連星": "Ni-rensei",
+      "松本武久": "Matsumoto Takehisa", "柳時熏": "Ryu Shikun", "大橋拓文": "Ohashi Hirofumi",
+      "依田紀基": "Yoda Norimoto", "大淵盛人": "Obuchi Morihito", "武宮正樹": "Takemiya Masaki",
+      "山田規三生": "Yamada Kimio", "山城宏": "Yamashiro Hiroshi", "小林光一": "Kobayashi Koichi",
+      "本木克弥": "Motoki Katsuya", "吉原由香里": "Yoshihara Yukari", "小林覚": "Kobayashi Satoru",
+      "金恩持": "Kim Eunchi", "李昌鎬": "Lee Changho", "芝野虎丸": "Shibano Toramaru",
+      "一力遼": "Ichiriki Ryo", "西村仁": "Nishimura Hitoshi", "関山利道": "Sekiyama Toshimichi",
+      "大淵浩太郎": "Obuchi Kotaro", "大西竜平": "Onishi Ryuhei", "仲邑菫": "Nakamura Sumire",
+      "呉政娥": "Oh Jeongah", "高根台": "Ko Geundae", "富士田明彦": "Fujita Akihiko",
+      "黄翊祖": "Huang Yizhong", "朴廷桓": "Park Junghwan", "姜東潤": "Kang Dongyun",
+      "余正麒": "Yu Zhengqi", "林怡廷": "Lin Yiting", "岩田紗絵加": "Iwata Saeka", "柯潔": "Ke Jie", "韓相朝": "Han Sangjo"
+    }
+  },
+  zh: {
+    langFont: "'Noto Serif JP', serif",
+    siteTitle: "⚫ 围棋棋谱道场",
+    gameTitle: "围棋棋谱记忆游戏",
+    gameSub: "选择棋谱 → 记忆 → 再现 → 评分　共40局",
+    challengeLoading: "累计挑战次数：加载中...",
+    challengeCount: (n) => `累计挑战次数：${n} 次`,
+    scoreBtn: "🏆 排行榜",
+    playerTitle: "玩家姓名",
+    playerSub: "请输入您的名字",
+    playerPlaceholder: "例：张三",
+    nextBtn: "下一步",
+    backToKifu: "← 更换棋谱",
+    selectTitle: "选择棋谱",
+    backToList: "← 返回列表",
+    gradeTitle: "选择难度",
+    backToSelect: "← 返回选择",
+    gradeAdv: "高级", gradeAdvHint: "无提示", gradeAdvPt: "答对 3分/题", gradeAdvMax: "最高 150分",
+    gradeMid: "中级", gradeMidHint: "3选1提示", gradeMidPt: "答对 2分/题", gradeMidMax: "最高 100分",
+    gradeBeg: "初级", gradeBegHint: "2选1提示", gradeBegPt: "答对 1分/题", gradeBegMax: "最高 50分",
+    studyInfo: "👉 请按「下一步 ▶」按钮记忆棋谱",
+    prev5: "◀◀5手", prevBtn: "◀ 上一步", nextStudy: "下一步 ▶", next5: "5手▶▶",
+    studyComplete: "记忆完成 → 开始测验",
+    aiResearch: "🤖 AI研究模式",
+    backToSelectDanger: "← 返回选择",
+    hintClick: "点击",
+    hintBtn: "💡 查看提示",
+    abortBtn: "结束并记录",
+    quizInstruction: "点击棋盘作答",
+    resultTitle: "结果",
+    resultPerfect: "🎉 完美！50手全部答对！",
+    playAgain: "再来一次",
+    scoreListBtn: "🏆 排行榜",
+    changeKifu: "更换棋谱",
+    rankTitle: "🏆 分数排行榜",
+    rankLocal: "本设备",
+    rankGlobal: "全球排行",
+    rankAdv: "高级", rankMid: "中级", rankBeg: "初级",
+    rankAdvSub: "高级：最高150分", rankMidSub: "中级：最高100分", rankBegSub: "初级：最高50分",
+    selectKifuBtn: "选择棋谱",
+    levelAdv: "高级", levelMid: "中级", levelBeg: "初级",
+    noRecord: "暂无记录",
+    black: "⚫", white: "⚪",
+    moveCount: (n,m) => `第${n}手：`,
+    colorBlack: "⚫ 黑", colorWhite: "⚪ 白",
+    notPlayed: "未游玩", best: "最佳",
+    halfway: (n) => `${n}手(中途)　`, allMoves: "全50手　",
+    resultAnswered: (n,mx) => n<50 ? `回答了${n}手（未完成）` : `全50手答完　最高${mx}分`,
+    selectSub: (name) => `玩家：${name}　│　3分钟内记住50手`,
+    titles: {
+      "三連星": "三连星", "二連星": "二连星",
+      "松本武久": "松本武久", "柳時熏": "柳时熏", "大橋拓文": "大桥拓文",
+      "依田紀基": "依田纪基", "大淵盛人": "大渊盛人", "武宮正樹": "武宫正树",
+      "山田規三生": "山田规三生", "山城宏": "山城宏", "小林光一": "小林光一",
+      "本木克弥": "本木克弥", "吉原由香里": "吉原由香里", "小林覚": "小林觉",
+      "金恩持": "金恩持", "李昌鎬": "李昌镐", "芝野虎丸": "芝野虎丸",
+      "一力遼": "一力辽", "西村仁": "西村仁", "関山利道": "关山利道",
+      "大淵浩太郎": "大渊浩太郎", "大西竜平": "大西龙平", "仲邑菫": "仲邑菫",
+      "呉政娥": "吴政娥", "高根台": "高根台", "富士田明彦": "富士田明彦",
+      "黄翊祖": "黄翊祖", "朴廷桓": "朴廷桓", "姜東潤": "姜东润",
+      "余正麒": "余正麒", "林怡廷": "林怡廷", "岩田紗絵加": "岩田纱绘加",
+      "柯潔": "柯洁", "韓相朝": "韩相朝"
+    }
+  },
+  ko: {
+    langFont: "'Noto Serif JP', serif",
+    siteTitle: "⚫ 바둑 기보 도장",
+    gameTitle: "바둑 기보 기억력 게임",
+    gameSub: "기보 선택 → 기억 → 재현 → 채점　40국 수록",
+    challengeLoading: "총 도전 횟수：불러오는 중...",
+    challengeCount: (n) => `총 도전 횟수：${n} 회`,
+    scoreBtn: "🏆 랭킹",
+    playerTitle: "플레이어 이름",
+    playerSub: "이름을 입력하세요",
+    playerPlaceholder: "예：홍길동",
+    nextBtn: "다음",
+    backToKifu: "← 기보 변경",
+    selectTitle: "기보 선택",
+    backToList: "← 목록으로",
+    gradeTitle: "등급 선택",
+    backToSelect: "← 선택으로 돌아가기",
+    gradeAdv: "고급", gradeAdvHint: "힌트 없음", gradeAdvPt: "정답 시 3점/문", gradeAdvMax: "최고 150점",
+    gradeMid: "중급", gradeMidHint: "3지선다 힌트", gradeMidPt: "정답 시 2점/문", gradeMidMax: "최고 100점",
+    gradeBeg: "초급", gradeBegHint: "2지선다 힌트", gradeBegPt: "정답 시 1점/문", gradeBegMax: "최고 50점",
+    studyInfo: "👉 「다음 ▶」버튼을 눌러 기보를 기억하세요",
+    prev5: "◀◀5수", prevBtn: "◀ 이전", nextStudy: "다음 ▶", next5: "5수▶▶",
+    studyComplete: "기억 완료 → 퀴즈 시작",
+    aiResearch: "🤖 AI 연구 모드",
+    backToSelectDanger: "← 선택으로 돌아가기",
+    hintClick: "클릭",
+    hintBtn: "💡 힌트 보기",
+    abortBtn: "종료 및 기록",
+    quizInstruction: "바둑판을 클릭하여 답하세요",
+    resultTitle: "결과 발표",
+    resultPerfect: "🎉 완벽! 50수 전부 정답!",
+    playAgain: "다시 하기",
+    scoreListBtn: "🏆 랭킹",
+    changeKifu: "기보 변경",
+    rankTitle: "🏆 점수 랭킹",
+    rankLocal: "이 기기",
+    rankGlobal: "전체 랭킹",
+    rankAdv: "고급", rankMid: "중급", rankBeg: "초급",
+    rankAdvSub: "고급：최고 150점", rankMidSub: "중급：최고 100점", rankBegSub: "초급：최고 50점",
+    selectKifuBtn: "기보 선택",
+    levelAdv: "고급", levelMid: "중급", levelBeg: "초급",
+    noRecord: "아직 기록이 없습니다",
+    black: "⚫", white: "⚪",
+    moveCount: (n,m) => `제${n}수：`,
+    colorBlack: "⚫ 흑", colorWhite: "⚪ 백",
+    notPlayed: "미플레이", best: "Best",
+    halfway: (n) => `${n}수(중도)　`, allMoves: "전50수　",
+    resultAnswered: (n,mx) => n<50 ? `${n}수까지 답함（중도 종료）` : `50수 전부 답함　최고 ${mx}점`,
+    selectSub: (name) => `플레이어：${name}　│　50수를 3분 안에 기억`,
+    titles: {
+      "三連星": "산렌세이", "二連星": "니렌세이",
+      "松本武久": "마쓰모토 타케히사", "柳時熏": "류시쿤", "大橋拓文": "오하시 히로후미",
+      "依田紀基": "요다 노리모토", "大淵盛人": "오부치 모리히토", "武宮正樹": "다케미야 마사키",
+      "山田規三生": "야마다 기미오", "山城宏": "야마시로 히로시", "小林光一": "코바야시 코이치",
+      "本木克弥": "모토키 카쓰야", "吉原由香里": "요시하라 유카리", "小林覚": "코바야시 사토루",
+      "金恩持": "김은지", "李昌鎬": "이창호", "芝野虎丸": "시바노 토라마루",
+      "一力遼": "이치리키 료", "西村仁": "니시무라 히토시", "関山利道": "세키야마 토시미치",
+      "大淵浩太郎": "오부치 코타로", "大西竜平": "오니시 류헤이", "仲邑菫": "나카무라 스미레",
+      "呉政娥": "오정아", "高根台": "고근태", "富士田明彦": "후지타 아키히코",
+      "黄翊祖": "황익조", "朴廷桓": "박정환", "姜東潤": "강동윤",
+      "余正麒": "위정기", "林怡廷": "린이팅", "岩田紗絵加": "이와타 사에카",
+      "柯潔": "커제", "韓相朝": "한상조"
+    }
+  }
+};
+
+let currentLang = 'ja';
+
+// タイトルを現在の言語に翻訳
+function translateTitle(jaTitle) {
+  const t = I18N[currentLang].titles;
+  if(!t || Object.keys(t).length===0) return jaTitle;
+  let result = jaTitle;
+  for(const [ja, tr] of Object.entries(t)) {
+    result = result.split(ja).join(tr);
+  }
+  return result;
+}
+
+// グレード名を翻訳（ja→currentLang）
+function translateGrade(jaGrade) {
+  const map = { '上級':'gradeAdv', '中級':'gradeMid', '初級':'gradeBeg' };
+  const key = map[jaGrade];
+  return key ? I18N[currentLang][key] : jaGrade;
+}
+
+// 言語適用
+function applyLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('igo_lang', lang);
+  const t = I18N[lang];
+
+  // フォント
+  document.body.style.fontFamily = t.langFont;
+
+  // フラグボタンのハイライト
+  ['ja','en','zh','ko'].forEach(l => {
+    const btn = document.getElementById('flag-'+l);
+    if(btn) btn.style.borderColor = l===lang ? '#e8c964' : 'transparent';
+  });
+
+  // サイトロゴ
+  const logo = document.querySelector('.site-logo');
+  if(logo) logo.textContent = t.siteTitle;
+
+  // トップ画面
+  setText('top-mode-title', t.gameTitle);
+  setText('top-mode-sub', t.gameSub);
+  setText('upload-scores-btn', null, `<button class="btn-ghost" onclick="showScreen('s-scores')">${t.scoreBtn}</button>`);
+
+  // 名前入力
+  setText('s-name', null, `
+    <div class="card">
+      <div class="title">${t.playerTitle}</div>
+      <div class="sub">${t.playerSub}</div>
+      <div class="row">
+        <input id="name-input" placeholder="${t.playerPlaceholder}" onkeydown="if(event.key==='Enter')confirmName()">
+        <button class="btn" onclick="confirmName()">${t.nextBtn}</button>
+      </div>
+      <div style="margin-top:14px;text-align:center">
+        <button class="btn-ghost" onclick="showScreen('s-upload')">${t.backToKifu}</button>
+      </div>
+    </div>`);
+
+  // 棋譜選択
+  setAttr('s-select', '.title', t.selectTitle);
+  setAttr('s-select', '.btn-ghost', t.backToList);
+
+  // グレード選択
+  const gradeScreen = document.getElementById('s-grade');
+  if(gradeScreen) {
+    const gTitle = gradeScreen.querySelector('.title');
+    if(gTitle) gTitle.textContent = t.gradeTitle;
+    const btns = gradeScreen.querySelectorAll('.btn-ghost');
+    const gradeData = [
+      {color:'#fca5a5',border:'rgba(252,165,165,0.4)',key:'Adv',grade:'上級'},
+      {color:'#fcd34d',border:'rgba(252,211,77,0.4)',key:'Mid',grade:'中級'},
+      {color:'#6ee7b7',border:'rgba(110,231,183,0.4)',key:'Beg',grade:'初級'},
+    ];
+    gradeData.forEach((g,i) => {
+      if(btns[i]) btns[i].innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <span style="color:${g.color};font-weight:700;font-size:15px;letter-spacing:2px">${t['grade'+g.key]}</span>
+            <span style="color:#9ca3af;font-size:11px;margin-left:10px">${t['grade'+g.key+'Hint']}</span>
+          </div>
+          <div style="text-align:right">
+            <div style="color:#e8c964;font-size:12px;font-weight:700">${t['grade'+g.key+'Pt']}</div>
+            <div style="color:#6b7280;font-size:11px">${t['grade'+g.key+'Max']}</div>
+          </div>
+        </div>`;
+    });
+    if(btns[3]) btns[3].textContent = t.backToSelect;
+  }
+
+  // 学習画面ボタン
+  const studyInfo = document.getElementById('study-move-info');
+  if(studyInfo && studyInfo.textContent.includes('▶')) studyInfo.textContent = t.studyInfo;
+  setBtnText('btn-prev5', t.prev5);
+  setBtnText('btn-prev', t.prevBtn);
+  setBtnText('btn-next', t.nextStudy);
+  setBtnText('btn-next5', t.next5);
+  setBtnText('btn-study-complete', t.studyComplete);
+  setBtnText('btn-ai-research', t.aiResearch);
+  setBtnText('btn-study-back', t.backToSelectDanger);
+
+  // クイズ画面
+  const hintLegend = document.getElementById('hint-legend');
+  if(hintLegend) {
+    const span = hintLegend.querySelector('span:last-child');
+    if(span) span.textContent = t.hintClick;
+  }
+  setBtnText('btn-hint', `💡 ${t.hintBtn.replace('💡 ','')}`);
+  const abortBtn = document.querySelector('#s-quiz .btn-danger');
+  if(abortBtn) abortBtn.textContent = t.abortBtn;
+
+  // 結果画面
+  const resultTitle = document.querySelector('#s-result .title');
+  if(resultTitle) resultTitle.textContent = t.resultTitle;
+  const resultPerfect = document.getElementById('result-perfect');
+  if(resultPerfect) resultPerfect.textContent = t.resultPerfect;
+  const resultBtns = document.querySelectorAll('#s-result .btn, #s-result .btn-ghost');
+  if(resultBtns[0]) resultBtns[0].textContent = t.playAgain;
+  if(resultBtns[1]) resultBtns[1].textContent = t.scoreListBtn;
+  if(resultBtns[2]) resultBtns[2].textContent = t.changeKifu;
+
+  // スコア一覧
+  const rankTitle = document.querySelector('#s-scores .title');
+  if(rankTitle) rankTitle.textContent = t.rankTitle;
+  setBtnText('btn-mode-local', t.rankLocal);
+  setBtnText('btn-mode-global', t.rankGlobal);
+  const tabBtns = document.querySelectorAll('#score-tab-bar button');
+  if(tabBtns[0]) tabBtns[0].textContent = t.rankAdv;
+  if(tabBtns[1]) tabBtns[1].textContent = t.rankMid;
+  if(tabBtns[2]) tabBtns[2].textContent = t.rankBeg;
+  const selectKifuBtn = document.querySelector('#s-scores .btn');
+  if(selectKifuBtn) selectKifuBtn.textContent = t.selectKifuBtn;
+
+  // 棋譜リスト再描画（翻訳を反映）
+  if(typeof renderTopKifuList === 'function') renderTopKifuList();
+  if(typeof renderKifuList === 'function') renderKifuList();
+}
+
+// ヘルパー関数
+function setText(id, text, html) {
+  const el = document.getElementById(id);
+  if(!el) return;
+  if(html !== undefined && html !== null) el.innerHTML = html;
+  else if(text !== null) el.textContent = text;
+}
+function setBtnText(id, text) {
+  const el = document.getElementById(id);
+  if(el) el.textContent = text;
+}
+function setAttr(screenId, selector, text) {
+  const screen = document.getElementById(screenId);
+  if(!screen) return;
+  const el = screen.querySelector(selector);
+  if(el) el.textContent = text;
+}
+
 // ===== 定数 =====
 const BOARD_SIZE = 19;
 const COLS = "ABCDEFGHJKLMNOPQRST";
@@ -391,7 +803,7 @@ async function loadChallengeCount() {
     const res = await fetch(GAS_URL);
     const data = await res.json();
     const el = document.getElementById('challenge-count');
-    if (el) el.textContent = `累計チャレンジ回数：${data.count} 回`;
+    if (el) el.textContent = I18N[currentLang].challengeCount(data.count);
   } catch {
     const el = document.getElementById('challenge-count');
     if (el) el.textContent = '';
@@ -660,18 +1072,20 @@ function renderTopKifuList() {
     const item = document.createElement('div');
     item.className = 'kifu-item';
     const bestScore = getBestScore(k.id);
+    const t = I18N[currentLang];
     const scoreBadge = bestScore !== null
-      ? `<span style="font-size:11px;color:#e8c964;background:rgba(200,168,75,0.15);border:1px solid rgba(200,168,75,0.3);border-radius:10px;padding:2px 8px">Best: ${bestScore}点</span>`
-      : `<span style="font-size:11px;color:#6b7280">未プレイ</span>`;
+      ? `<span style="font-size:11px;color:#e8c964;background:rgba(200,168,75,0.15);border:1px solid rgba(200,168,75,0.3);border-radius:10px;padding:2px 8px">${t.best}: ${bestScore}点</span>`
+      : `<span style="font-size:11px;color:#6b7280">${t.notPlayed}</span>`;
+    const dispTitle = translateTitle(k.title);
     item.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
       <div>
-        <span style="color:#e8c964;font-weight:700;margin-right:8px;font-size:13px">${k.title}</span>
+        <span style="color:#e8c964;font-weight:700;margin-right:8px;font-size:13px">${dispTitle}</span>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         ${scoreBadge}
-        <span class="badge-black">⚫ ${k.black}</span>
+        <span class="badge-black">⚫ ${translateTitle(k.black)}</span>
         <span style="color:#6b7280;font-size:11px">vs</span>
-        <span class="badge-white">⚪ ${k.white}</span>
+        <span class="badge-white">⚪ ${translateTitle(k.white)}</span>
       </div>
     </div>`;
     item.onclick = () => { playerName ? goToGradeSelect(k) : startStudyDirect(k); };
@@ -691,7 +1105,7 @@ function startStudyDirect(k) {
 function goToGradeSelect(k) {
   currentKifu = k;
   document.getElementById('grade-kifu-name').textContent =
-    `${k.title}　${k.black} vs ${k.white}`;
+    `${translateTitle(k.title)}　${translateTitle(k.black)} vs ${translateTitle(k.white)}`;
   showScreen('s-grade');
 }
 
@@ -755,7 +1169,7 @@ function confirmName() {
   const v = document.getElementById('name-input').value.trim();
   if (!v) return;
   playerName = v;
-  document.getElementById('select-sub').textContent = `プレーヤー：${playerName}　│　50手を3分以内に記憶`;
+  document.getElementById('select-sub').textContent = I18N[currentLang].selectSub(playerName);
   const pendingId = document.getElementById('name-input').dataset.pendingKifu;
   if (pendingId) {
     delete document.getElementById('name-input').dataset.pendingKifu;
@@ -957,16 +1371,17 @@ function drawStudyBoard() {
   const pct = (studyMove / studyMaxMove * 100).toFixed(1);
   document.getElementById('study-progress').style.width = pct + '%';
   const infoEl = document.getElementById('study-move-info');
+  const t = I18N[currentLang];
   if (studyMove === 0) {
-    infoEl.textContent = '👉 「次 ▶」ボタンを押して棋譜を記憶してください';
+    infoEl.textContent = t.studyInfo;
     infoEl.style.cssText = 'color:#e8c964;font-size:14px;font-weight:700;margin-bottom:8px;padding:8px 14px;background:rgba(232,201,100,0.1);border:1px solid rgba(232,201,100,0.35);border-radius:8px;letter-spacing:1px;animation:pulse 2s ease-in-out infinite;';
     document.getElementById('study-move-label').textContent = '';
   } else {
-    infoEl.textContent = `手数：${studyMove} / ${studyMaxMove}`;
+    infoEl.textContent = `${studyMove} / ${studyMaxMove}`;
     infoEl.style.cssText = 'color:#9ca3af;font-size:12px;margin-bottom:4px;padding:0;background:none;border:none;border-radius:0;animation:none;';
     const mv = currentKifu.moves[studyMove-1];
-    const color = (studyMove-1)%2===0 ? '⚫ 黒' : '⚪ 白';
-    document.getElementById('study-move-label').innerHTML = `第${studyMove}手：<span style="color:#e8c964;font-weight:700">${mv}</span>　${color}`;
+    const color = (studyMove-1)%2===0 ? t.colorBlack : t.colorWhite;
+    document.getElementById('study-move-label').innerHTML = `${t.moveCount(studyMove)}<span style="color:#e8c964;font-weight:700">${mv}</span>　${color}`;
   }
 }
 
@@ -1253,12 +1668,14 @@ function finishQuiz() {
   globalScores = null; // キャッシュをクリア（次回ランキング表示時に再取得）
 
   const ratio = quizScore / mx;
+  const t = I18N[currentLang];
   document.getElementById('result-trophy').textContent = ratio>=0.8?"🏆":ratio>=0.5?"⭐":"🎯";
   document.getElementById('result-score').innerHTML = `${quizScore}<span style="font-size:20px">点</span>`;
-  document.getElementById('result-player').textContent = `${playerName} さん`;
-  document.getElementById('result-kifu').textContent = `${currentKifu.title}　【${selectedGrade}】`;
-  document.getElementById('result-answered').textContent = quizMove<50?`${quizMove}手まで回答（途中終了）`:`50手全問回答　最高${mx}点`;
+  document.getElementById('result-player').textContent = `${playerName}`;
+  document.getElementById('result-kifu').textContent = `${translateTitle(currentKifu.title)}　【${translateGrade(selectedGrade)}】`;
+  document.getElementById('result-answered').textContent = t.resultAnswered(quizMove, mx);
   const perf = document.getElementById('result-perfect');
+  perf.textContent = t.resultPerfect;
   perf.style.display = (quizScore===mx&&quizMove>=50) ? 'block' : 'none';
   showScreen('s-result');
 }
@@ -1292,8 +1709,9 @@ function setScoreTab(grade, btn) {
   });
   btn.classList.add('filter-active');
   btn.style.opacity = '1';
-  const mx = grade==='上級'?150:grade==='中級'?100:50;
-  document.getElementById('score-tab-sub').textContent = `${grade}：最高${mx}点　上位100件`;
+  const t = I18N[currentLang];
+  const subMap = {'上級': t.rankAdvSub, '中級': t.rankMidSub, '初級': t.rankBegSub};
+  document.getElementById('score-tab-sub').textContent = subMap[grade] || subMap['上級'];
   if (currentScoreMode === 'global' && globalScores === null) {
     loadGlobalScores();
   } else {
@@ -1332,7 +1750,7 @@ function renderScoreList() {
   }
 
   if (list.length === 0) {
-    el.innerHTML = '<div style="text-align:center;color:#6b7280;padding:32px">まだ記録がありません</div>';
+    el.innerHTML = `<div style="text-align:center;color:#6b7280;padding:32px">${I18N[currentLang].noRecord}</div>`;
     return;
   }
   el.innerHTML = '';
@@ -1375,6 +1793,11 @@ window.showScreen = function(id) {
 };
 
 // 初期チェック完了（棋譜データは内蔵済み）
+// 保存済み言語を復元（デフォルト：日本語）
+(function() {
+  const saved = localStorage.getItem('igo_lang') || 'ja';
+  applyLang(saved);
+})();
 
 // ===== 盤面サイズを画面に合わせて動的調整 =====
 function resizeBoards() {
