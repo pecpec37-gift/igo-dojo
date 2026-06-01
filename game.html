@@ -155,10 +155,10 @@
 <header class="site-header">
   <a class="site-logo" href="index.html">⚫ 囲碁棋譜道場</a>
   <nav class="site-nav" id="lang-nav" style="display:flex;gap:4px;">
-    <button onclick="applyLang('ja')" id="flag-ja" style="background:none;border:2px solid rgba(200,168,75,0.5);border-radius:6px;cursor:pointer;font-size:12px;padding:3px 8px;transition:all .2s;color:#e8c964;font-weight:700;font-family:'Noto Serif JP',serif" title="日本語">JP</button>
-    <button onclick="applyLang('en')" id="flag-en" style="background:none;border:2px solid transparent;border-radius:6px;cursor:pointer;font-size:12px;padding:3px 8px;transition:all .2s;color:#9ca3af;font-family:'Noto Serif JP',serif" title="English">EN</button>
-    <button onclick="applyLang('zh')" id="flag-zh" style="background:none;border:2px solid transparent;border-radius:6px;cursor:pointer;font-size:12px;padding:3px 8px;transition:all .2s;color:#9ca3af;font-family:'Noto Serif JP',serif" title="中文">中</button>
-    <button onclick="applyLang('ko')" id="flag-ko" style="background:none;border:2px solid transparent;border-radius:6px;cursor:pointer;font-size:12px;padding:3px 8px;transition:all .2s;color:#9ca3af;font-family:'Noto Serif JP',serif" title="한국어">한</button>
+    <button onclick="applyLang('ja')" id="flag-ja" style="background:none;border:2px solid transparent;border-radius:6px;cursor:pointer;font-size:20px;padding:2px 5px;transition:border-color .2s" title="日本語">🇯🇵</button>
+    <button onclick="applyLang('en')" id="flag-en" style="background:none;border:2px solid transparent;border-radius:6px;cursor:pointer;font-size:20px;padding:2px 5px;transition:border-color .2s" title="English">🇺🇸</button>
+    <button onclick="applyLang('zh')" id="flag-zh" style="background:none;border:2px solid transparent;border-radius:6px;cursor:pointer;font-size:20px;padding:2px 5px;transition:border-color .2s" title="中文">🇨🇳</button>
+    <button onclick="applyLang('ko')" id="flag-ko" style="background:none;border:2px solid transparent;border-radius:6px;cursor:pointer;font-size:20px;padding:2px 5px;transition:border-color .2s" title="한국어">🇰🇷</button>
   </nav>
 </header>
 
@@ -409,6 +409,10 @@ const I18N = {
     studyInfo: "👉 「次 ▶」ボタンを押して棋譜を記憶してください",
     prev5: "5手◀◀", prevBtn: "◀ 前", nextStudy: "次 ▶", next5: "▶▶5手",
     studyComplete: "記憶完了 → クイズへ",
+    challengeBtn: "🎲 ランダムに挑戦！",
+    correct: "✓ 正解",
+    correctPts: (n) => `✓ 正解 +${n}点`,
+    wrong: "✗ 不正解",
     aiResearch: "🤖 AI研究モード — 有力手を分析",
     backToSelectDanger: "← 棋譜選択に戻る",
     hintClick: "をクリック",
@@ -461,6 +465,10 @@ const I18N = {
     studyInfo: "👉 Press 「Next ▶」 to memorize the game",
     prev5: "◀◀5", prevBtn: "◀ Prev", nextStudy: "Next ▶", next5: "5▶▶",
     studyComplete: "Memorized → Start Quiz",
+    challengeBtn: "🎲 Random Challenge!",
+    correct: "✓ Correct",
+    correctPts: (n) => `✓ Correct +${n}pts`,
+    wrong: "✗ Wrong",
     aiResearch: "🤖 AI Analysis Mode",
     backToSelectDanger: "← Back to Select",
     hintClick: "click",
@@ -529,6 +537,10 @@ const I18N = {
     studyInfo: "👉 请按「下一步 ▶」按钮记忆棋谱",
     prev5: "◀◀5手", prevBtn: "◀ 上一步", nextStudy: "下一步 ▶", next5: "5手▶▶",
     studyComplete: "记忆完成 → 开始测验",
+    challengeBtn: "🎲 随机挑战！",
+    correct: "✓ 正确",
+    correctPts: (n) => `✓ 正确 +${n}分`,
+    wrong: "✗ 错误",
     aiResearch: "🤖 AI研究模式",
     backToSelectDanger: "← 返回选择",
     hintClick: "点击",
@@ -593,6 +605,10 @@ const I18N = {
     studyInfo: "👉 「다음 ▶」버튼을 눌러 기보를 기억하세요",
     prev5: "◀◀5수", prevBtn: "◀ 이전", nextStudy: "다음 ▶", next5: "5수▶▶",
     studyComplete: "기억 완료 → 퀴즈 시작",
+    challengeBtn: "🎲 랜덤 도전！",
+    correct: "✓ 정답",
+    correctPts: (n) => `✓ 정답 +${n}점`,
+    wrong: "✗ 오답",
     aiResearch: "🤖 AI 연구 모드",
     backToSelectDanger: "← 선택으로 돌아가기",
     hintClick: "클릭",
@@ -665,14 +681,10 @@ function applyLang(lang) {
   // フォント
   document.body.style.fontFamily = t.langFont;
 
-  // 言語ボタンのハイライト
+  // フラグボタンのハイライト
   ['ja','en','zh','ko'].forEach(l => {
     const btn = document.getElementById('flag-'+l);
-    if(btn) {
-      btn.style.borderColor = l===lang ? 'rgba(200,168,75,0.8)' : 'transparent';
-      btn.style.color = l===lang ? '#e8c964' : '#9ca3af';
-      btn.style.fontWeight = l===lang ? '700' : '400';
-    }
+    if(btn) btn.style.borderColor = l===lang ? '#e8c964' : 'transparent';
   });
 
   // サイトロゴ
@@ -737,6 +749,9 @@ function applyLang(lang) {
   setBtnText('btn-next', t.nextStudy);
   setBtnText('btn-next5', t.next5);
   setBtnText('btn-study-complete', t.studyComplete);
+  // チャレンジボタン
+  const chalBtn = document.querySelector('#s-upload button.btn');
+  if(chalBtn) chalBtn.innerHTML = t.challengeBtn;
   setBtnText('btn-ai-research', t.aiResearch);
   setBtnText('btn-study-back', t.backToSelectDanger);
 
@@ -1344,7 +1359,7 @@ function startStudy(k) {
   } else {
     // ゲーム・チャレンジモード：通常表示
     btnComplete.style.display = 'inline-block';
-    btnComplete.textContent = '記憶完了 → クイズへ';
+    btnComplete.textContent = I18N[currentLang].studyComplete;
     btnAI.style.display = 'none';
     timerEl.style.display = '';
   }
@@ -1543,7 +1558,7 @@ function handleAnswer(cell) {
     quizScore += pts;
     quizBoardMoves = [...quizBoardMoves, {col:cell.col, row:cell.row, color:quizCurrentColor}];
     drawBoard('quiz-board', quizBoardMoves, {feedback:"correct"});
-    const scoreMsg = pts > 0 ? `✓ 正解 +${pts}点` : "✓ 正解";
+    const scoreMsg = pts > 0 ? I18N[currentLang].correctPts(pts) : I18N[currentLang].correct;
     showFeedbackMsg(scoreMsg, "#4ade80");
     setTimeout(() => {
       hideFeedback();
@@ -1571,7 +1586,7 @@ function handleAnswer(cell) {
     }, 700);
   } else {
     drawBoard('quiz-board', quizBoardMoves, {feedback:"wrong", lastWrong:{col:cell.col,row:cell.row}});
-    showFeedbackMsg("✗ 不正解", "#f87171");
+    showFeedbackMsg(I18N[currentLang].wrong, "#f87171");
     quizAfterWrong = true;
     const hints = makeHints(quizMove, quizBoardMoves, wrongChoice);
     setTimeout(() => {
@@ -1594,7 +1609,7 @@ function showFeedbackMsg(text, color) {
   ov.style.border = `2px solid ${color}`;
   ov.classList.add('show');
 }
-function showFeedback(correct) { showFeedbackMsg(correct?"✓ 正解":"✗ 不正解", correct?"#4ade80":"#f87171"); }
+function showFeedback(correct) { showFeedbackMsg(correct ? I18N[currentLang].correct : I18N[currentLang].wrong, correct?"#4ade80":"#f87171"); }
 function hideFeedback() { document.getElementById('feedback-overlay').classList.remove('show'); }
 
 function makeHints(qm, bm, count=3) {
