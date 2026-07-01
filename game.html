@@ -216,6 +216,49 @@
   </div>
 </div>
 
+<!-- 手番選択 -->
+<div class="screen" id="s-color">
+  <div class="card" style="max-width:460px">
+    <div class="title" style="font-size:20px;margin-bottom:6px" id="color-title">手番を選択</div>
+    <div id="color-kifu-name" style="color:#9ca3af;font-size:12px;text-align:center;margin-bottom:20px"></div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
+      <button class="btn-ghost" onclick="selectColorMode('both')" style="padding:16px;border-radius:12px;text-align:left;border-color:rgba(200,168,75,0.4)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <span style="color:#e8d5a3;font-weight:700;font-size:15px;letter-spacing:2px" id="color-label-both">⚫⚪ 黒白両方</span>
+          </div>
+          <div style="text-align:right">
+            <div style="color:#e8c964;font-size:12px;font-weight:700" id="color-desc-both">全50手を出題</div>
+          </div>
+        </div>
+      </button>
+      <button class="btn-ghost" onclick="selectColorMode('black')" style="padding:16px;border-radius:12px;text-align:left;border-color:rgba(255,255,255,0.25)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <span style="color:#eeeeee;font-weight:700;font-size:15px;letter-spacing:2px" id="color-label-black">⚫ 黒のみ</span>
+          </div>
+          <div style="text-align:right">
+            <div style="color:#e8c964;font-size:12px;font-weight:700" id="color-desc-black">黒番25手を出題</div>
+          </div>
+        </div>
+      </button>
+      <button class="btn-ghost" onclick="selectColorMode('white')" style="padding:16px;border-radius:12px;text-align:left;border-color:rgba(200,200,200,0.4)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <span style="color:#eeeeee;font-weight:700;font-size:15px;letter-spacing:2px" id="color-label-white">⚪ 白のみ</span>
+          </div>
+          <div style="text-align:right">
+            <div style="color:#e8c964;font-size:12px;font-weight:700" id="color-desc-white">白番25手を出題</div>
+          </div>
+        </div>
+      </button>
+    </div>
+    <div style="text-align:center">
+      <button class="btn-ghost" onclick="showScreen('s-upload')" id="color-back-btn">← 棋譜一覧に戻る</button>
+    </div>
+  </div>
+</div>
+
 <!-- グレード選択 -->
 <div class="screen" id="s-grade">
   <div class="card" style="max-width:460px">
@@ -260,7 +303,7 @@
       </button>
     </div>
     <div style="text-align:center">
-      <button class="btn-ghost" onclick="showScreen('s-select')">← 棋譜選択に戻る</button>
+      <button class="btn-ghost" onclick="showScreen('s-color')">← 手番選択に戻る</button>
     </div>
   </div>
 </div>
@@ -402,7 +445,13 @@ const I18N = {
     selectTitle: "棋譜を選択",
     backToList: "← 棋譜一覧に戻る",
     gradeTitle: "グレードを選択",
-    backToSelect: "← 棋譜選択に戻る",
+    backToSelect: "← 手番選択に戻る",
+    colorTitle: "手番を選択",
+    colorBoth: "⚫⚪ 黒白両方", colorBlackOnly: "⚫ 黒のみ", colorWhiteOnly: "⚪ 白のみ",
+    colorDescBoth: (n) => `全${n}手を出題`,
+    colorDescBlack: (n) => `黒番${n}手を出題`,
+    colorDescWhite: (n) => `白番${n}手を出題`,
+    backToKifuList: "← 棋譜一覧に戻る",
     gradeAdv: "上級", gradeAdvHint: "ヒントなし", gradeAdvPt: "正解時 3点/問", gradeAdvMax: "最高 150点",
     gradeMid: "中級", gradeMidHint: "ヒントあり 3択", gradeMidPt: "正解時 2点/問", gradeMidMax: "最高 100点",
     gradeBeg: "初級", gradeBegHint: "ヒントあり 2択", gradeBegPt: "正解時 1点/問", gradeBegMax: "最高 50点",
@@ -420,7 +469,7 @@ const I18N = {
     abortBtn: "終了して記録",
     quizInstruction: "碁盤をクリックして答える",
     resultTitle: "結果発表",
-    resultPerfect: "🎉 完璧！50手全問正解！",
+    resultPerfect: (n) => `🎉 完璧！${n}手全問正解！`,
     playAgain: "もう一度",
     scoreListBtn: "🏆 スコア一覧",
     changeKifu: "棋譜を変更",
@@ -437,7 +486,7 @@ const I18N = {
     colorBlack: "⚫ 黒", colorWhite: "⚪ 白",
     notPlayed: "未プレイ", best: "Best",
     halfway: (n) => `${n}手(途中)　`, allMoves: "全50手　",
-    resultAnswered: (n,mx) => n<50 ? `${n}手まで回答（途中終了）` : `50手全問回答　最高${mx}点`,
+    resultAnswered: (n,mx,total) => n<total ? `${n}手まで回答（途中終了）` : `${total}手全問回答　最高${mx}点`,
     selectSub: (name) => `プレーヤー：${name}　│　50手を3分以内に記憶`,
     // 棋譜タイトル翻訳（id -> 表示名）
     titles: {}
@@ -458,7 +507,13 @@ const I18N = {
     selectTitle: "Select Game",
     backToList: "← Back to List",
     gradeTitle: "Select Grade",
-    backToSelect: "← Back to Select",
+    backToSelect: "← Back to Color Select",
+    colorTitle: "Select Side",
+    colorBoth: "⚫⚪ Both Black & White", colorBlackOnly: "⚫ Black Only", colorWhiteOnly: "⚪ White Only",
+    colorDescBoth: (n) => `${n} moves`,
+    colorDescBlack: (n) => `${n} Black moves`,
+    colorDescWhite: (n) => `${n} White moves`,
+    backToKifuList: "← Back to Game List",
     gradeAdv: "Advanced", gradeAdvHint: "No hints", gradeAdvPt: "3 pts/move", gradeAdvMax: "Max 150 pts",
     gradeMid: "Intermediate", gradeMidHint: "3-choice hint", gradeMidPt: "2 pts/move", gradeMidMax: "Max 100 pts",
     gradeBeg: "Beginner", gradeBegHint: "2-choice hint", gradeBegPt: "1 pt/move", gradeBegMax: "Max 50 pts",
@@ -476,7 +531,7 @@ const I18N = {
     abortBtn: "Finish & Save",
     quizInstruction: "Click the board to answer",
     resultTitle: "Results",
-    resultPerfect: "🎉 Perfect! All 50 moves correct!",
+    resultPerfect: (n) => `🎉 Perfect! All ${n} moves correct!`,
     playAgain: "Play Again",
     scoreListBtn: "🏆 Rankings",
     changeKifu: "Change Game",
@@ -493,7 +548,7 @@ const I18N = {
     colorBlack: "⚫ Black", colorWhite: "⚪ White",
     notPlayed: "Not played", best: "Best",
     halfway: (n) => `${n} moves (partial)　`, allMoves: "All 50 moves　",
-    resultAnswered: (n,mx) => n<50 ? `Answered ${n} moves (incomplete)` : `All 50 moves answered　Max ${mx} pts`,
+    resultAnswered: (n,mx,total) => n<total ? `Answered ${n} moves (incomplete)` : `All ${total} moves answered　Max ${mx} pts`,
     selectSub: (name) => `Player: ${name}　│　Memorize 50 moves in 3 min`,
     titles: {
       "第01局": "Game 01", "第02局": "Game 02", "第03局": "Game 03", "第04局": "Game 04",
@@ -530,7 +585,13 @@ const I18N = {
     selectTitle: "选择棋谱",
     backToList: "← 返回列表",
     gradeTitle: "选择难度",
-    backToSelect: "← 返回选择",
+    backToSelect: "← 返回选择手番",
+    colorTitle: "选择手番",
+    colorBoth: "⚫⚪ 黑白双方", colorBlackOnly: "⚫ 仅黑方", colorWhiteOnly: "⚪ 仅白方",
+    colorDescBoth: (n) => `共${n}手`,
+    colorDescBlack: (n) => `黑方${n}手`,
+    colorDescWhite: (n) => `白方${n}手`,
+    backToKifuList: "← 返回棋谱列表",
     gradeAdv: "高级", gradeAdvHint: "无提示", gradeAdvPt: "答对 3分/题", gradeAdvMax: "最高 150分",
     gradeMid: "中级", gradeMidHint: "3选1提示", gradeMidPt: "答对 2分/题", gradeMidMax: "最高 100分",
     gradeBeg: "初级", gradeBegHint: "2选1提示", gradeBegPt: "答对 1分/题", gradeBegMax: "最高 50分",
@@ -548,7 +609,7 @@ const I18N = {
     abortBtn: "结束并记录",
     quizInstruction: "点击棋盘作答",
     resultTitle: "结果",
-    resultPerfect: "🎉 完美！50手全部答对！",
+    resultPerfect: (n) => `🎉 完美！${n}手全部答对！`,
     playAgain: "再来一次",
     scoreListBtn: "🏆 排行榜",
     changeKifu: "更换棋谱",
@@ -565,7 +626,7 @@ const I18N = {
     colorBlack: "⚫ 黑", colorWhite: "⚪ 白",
     notPlayed: "未游玩", best: "最佳",
     halfway: (n) => `${n}手(中途)　`, allMoves: "全50手　",
-    resultAnswered: (n,mx) => n<50 ? `回答了${n}手（未完成）` : `全50手答完　最高${mx}分`,
+    resultAnswered: (n,mx,total) => n<total ? `回答了${n}手（未完成）` : `全${total}手答完　最高${mx}分`,
     selectSub: (name) => `玩家：${name}　│　3分钟内记住50手`,
     titles: {
       "三連星": "三连星", "二連星": "二连星",
@@ -598,7 +659,13 @@ const I18N = {
     selectTitle: "기보 선택",
     backToList: "← 목록으로",
     gradeTitle: "등급 선택",
-    backToSelect: "← 선택으로 돌아가기",
+    backToSelect: "← 수순 선택으로 돌아가기",
+    colorTitle: "수순 선택",
+    colorBoth: "⚫⚪ 흑백 모두", colorBlackOnly: "⚫ 흑만", colorWhiteOnly: "⚪ 백만",
+    colorDescBoth: (n) => `${n}수 출제`,
+    colorDescBlack: (n) => `흑번 ${n}수 출제`,
+    colorDescWhite: (n) => `백번 ${n}수 출제`,
+    backToKifuList: "← 기보 목록으로",
     gradeAdv: "고급", gradeAdvHint: "힌트 없음", gradeAdvPt: "정답 시 3점/문", gradeAdvMax: "최고 150점",
     gradeMid: "중급", gradeMidHint: "3지선다 힌트", gradeMidPt: "정답 시 2점/문", gradeMidMax: "최고 100점",
     gradeBeg: "초급", gradeBegHint: "2지선다 힌트", gradeBegPt: "정답 시 1점/문", gradeBegMax: "최고 50점",
@@ -616,7 +683,7 @@ const I18N = {
     abortBtn: "종료 및 기록",
     quizInstruction: "바둑판을 클릭하여 답하세요",
     resultTitle: "결과 발표",
-    resultPerfect: "🎉 완벽! 50수 전부 정답!",
+    resultPerfect: (n) => `🎉 완벽! ${n}수 전부 정답!`,
     playAgain: "다시 하기",
     scoreListBtn: "🏆 랭킹",
     changeKifu: "기보 변경",
@@ -633,7 +700,7 @@ const I18N = {
     colorBlack: "⚫ 흑", colorWhite: "⚪ 백",
     notPlayed: "미플레이", best: "Best",
     halfway: (n) => `${n}수(중도)　`, allMoves: "전50수　",
-    resultAnswered: (n,mx) => n<50 ? `${n}수까지 답함（중도 종료）` : `50수 전부 답함　최고 ${mx}점`,
+    resultAnswered: (n,mx,total) => n<total ? `${n}수까지 답함（중도 종료）` : `${total}수 전부 답함　최고 ${mx}점`,
     selectSub: (name) => `플레이어：${name}　│　50수를 3분 안에 기억`,
     titles: {
       "三連星": "산렌세이", "二連星": "니렌세이",
@@ -714,6 +781,18 @@ function applyLang(lang) {
   setAttr('s-select', '.title', t.selectTitle);
   setAttr('s-select', '.btn-ghost', t.backToList);
 
+  // 手番選択
+  const colorTitleEl = document.getElementById('color-title');
+  if (colorTitleEl) colorTitleEl.textContent = t.colorTitle;
+  const colorLabelBoth = document.getElementById('color-label-both');
+  if (colorLabelBoth) colorLabelBoth.textContent = t.colorBoth;
+  const colorLabelBlack = document.getElementById('color-label-black');
+  if (colorLabelBlack) colorLabelBlack.textContent = t.colorBlackOnly;
+  const colorLabelWhite = document.getElementById('color-label-white');
+  if (colorLabelWhite) colorLabelWhite.textContent = t.colorWhiteOnly;
+  setBtnText('color-back-btn', t.backToKifuList);
+  updateColorDescLabels();
+
   // グレード選択
   const gradeScreen = document.getElementById('s-grade');
   if(gradeScreen) {
@@ -739,6 +818,7 @@ function applyLang(lang) {
         </div>`;
     });
     if(btns[3]) btns[3].textContent = t.backToSelect;
+    updateGradeMaxLabels();
   }
 
   // 学習画面ボタン
@@ -769,7 +849,7 @@ function applyLang(lang) {
   const resultTitle = document.querySelector('#s-result .title');
   if(resultTitle) resultTitle.textContent = t.resultTitle;
   const resultPerfect = document.getElementById('result-perfect');
-  if(resultPerfect) resultPerfect.textContent = t.resultPerfect;
+  if(resultPerfect) resultPerfect.textContent = t.resultPerfect(currentKifu ? quizTotalCount() : 50);
   const resultBtns = document.querySelectorAll('#s-result .btn, #s-result .btn-ghost');
   if(resultBtns[0]) resultBtns[0].textContent = t.playAgain;
   if(resultBtns[1]) resultBtns[1].textContent = t.scoreListBtn;
@@ -953,12 +1033,14 @@ let currentFilter = '全て';
 let playerName = "";
 let currentKifu = null;
 let selectedGrade = '上級'; // プレイヤーが選択したグレード
+let selectedColorMode = 'both'; // 'both' | 'black' | 'white' — 手番選択
 let studyMove = 0;
 let studyMaxMove = 0;
 let studyTimer = null;
 let studyTimeLeft = 180;
 let quizMove = 0;
 let quizScore = 0;
+let quizAnsweredCount = 0; // 実際に出題された問題数（手番選択で片方のみの場合はquizMoveと一致しない）
 let quizHintUsed = false;
 let quizAfterWrong = false; // 不正解後フラグ
 let quizHintMoves = [];
@@ -1122,13 +1204,86 @@ function startStudyDirect(k) {
   }, 100);
 }
 
-// 棋譜選択後→グレード選択画面へ
+// 棋譜選択後→手番選択画面へ
 function goToGradeSelect(k) {
   currentKifu = k;
+  const label = `${translateTitle(k.title)}　${translateTitle(k.black)} vs ${translateTitle(k.white)}`;
+  document.getElementById('color-kifu-name').textContent = label;
+  updateColorDescLabels();
+  showScreen('s-color');
+}
+
+// 手番選択→グレード選択画面へ
+function selectColorMode(mode) {
+  selectedColorMode = mode;
   document.getElementById('grade-kifu-name').textContent =
-    `${translateTitle(k.title)}　${translateTitle(k.black)} vs ${translateTitle(k.white)}`;
+    `${translateTitle(currentKifu.title)}　${translateTitle(currentKifu.black)} vs ${translateTitle(currentKifu.white)}`;
+  updateGradeMaxLabels();
   showScreen('s-grade');
 }
+
+// 手番選択画面の出題手数表示を更新（棋譜の総手数に応じて）
+function updateColorDescLabels() {
+  if (!currentKifu) return;
+  const total = currentKifu.moves.length;
+  const half = Math.ceil(total / 2);
+  const t = I18N[currentLang];
+  const fmtBoth  = t.colorDescBoth  ? t.colorDescBoth(total) : `全${total}手を出題`;
+  const fmtBlack = t.colorDescBlack ? t.colorDescBlack(half) : `黒番${half}手を出題`;
+  const fmtWhite = t.colorDescWhite ? t.colorDescWhite(total - half) : `白番${total - half}手を出題`;
+  const elBoth = document.getElementById('color-desc-both');
+  const elBlack = document.getElementById('color-desc-black');
+  const elWhite = document.getElementById('color-desc-white');
+  if (elBoth) elBoth.textContent = fmtBoth;
+  if (elBlack) elBlack.textContent = fmtBlack;
+  if (elWhite) elWhite.textContent = fmtWhite;
+}
+
+// グレード選択画面の「最高◯点」表示を、手番選択と棋譜の総手数に応じて更新
+function updateGradeMaxLabels() {
+  if (!currentKifu) return;
+  const total = quizTotalCount();
+  const basePoints = [3, 2, 1]; // 上級・中級・初級の順（ボタンの並び順と一致）
+  const btns = document.querySelectorAll('#s-grade .btn-ghost');
+  basePoints.forEach((bp, i) => {
+    const btn = btns[i];
+    if (!btn) return;
+    const maxDiv = btn.querySelector('div[style*="text-align:right"] div:last-child');
+    if (!maxDiv) return;
+    const val = total * bp;
+    const label = currentLang === 'en' ? `Max ${val} pts`
+                : currentLang === 'zh' ? `最高 ${val}分`
+                : currentLang === 'ko' ? `최고 ${val}점`
+                : `最高 ${val}点`;
+    maxDiv.textContent = label;
+  });
+}
+
+// ===== 手番選択に応じたクイズ出題手フィルター =====
+// 選択した手番（黒/白/両方）に応じて、その手をクイズとして出題するかを判定
+function isQuizColor(idx) {
+  if (selectedColorMode === 'black') return idx % 2 === 0; // 黒番は偶数インデックス
+  if (selectedColorMode === 'white') return idx % 2 === 1; // 白番は奇数インデックス
+  return true; // both
+}
+
+// idx以降で最初にクイズ対象となる手のインデックスを返す（対象外の手は自動再現される）
+function advanceToQuizColor(idx) {
+  if (!currentKifu) return idx;
+  const total = currentKifu.moves.length;
+  while (idx < total && !isQuizColor(idx)) idx++;
+  return idx;
+}
+
+// 現在の棋譜・手番選択における出題総数
+function quizTotalCount() {
+  if (!currentKifu) return 0;
+  const total = currentKifu.moves.length;
+  let c = 0;
+  for (let i = 0; i < total; i++) if (isQuizColor(i)) c++;
+  return c;
+}
+
 
 renderTopKifuList();
 initMode();
@@ -1429,9 +1584,8 @@ function levelChoice() {
 }
 
 function maxScore() {
-  if (selectedGrade === '初級') return 50;
-  if (selectedGrade === '中級') return 100;
-  return 150; // 上級
+  const { basePoint } = levelChoice();
+  return quizTotalCount() * basePoint;
 }
 
 // グレード選択画面への遷移
@@ -1444,10 +1598,16 @@ function selectGrade(grade) {
 function startQuiz() {
   clearInterval(studyTimer);
   quizMove = 0; quizScore = 0; quizTimeLeft = 180;
+  quizAnsweredCount = 0;
   quizHintUsed = false; quizAfterWrong = false;
   quizHintMoves = []; quizShowHint = false; quizFeedback = false;
   quizBoardMoves = [];
   quizCurrentColor = "black";
+
+  // 手番選択で片方のみの場合、対象外の手は自動再現しつつ最初の出題手まで進める
+  quizMove = advanceToQuizColor(0);
+  quizBoardMoves = buildBoard(currentKifu, quizMove);
+
   updateQuizTimer();
   updateQuizLabels();
 
@@ -1506,7 +1666,7 @@ function updateQuizTimer() {
 function updateQuizLabels() {
   quizCurrentColor = quizMove%2===0 ? "black" : "white";
   document.getElementById('quiz-move-label').textContent = `第${quizMove+1}手　${quizMove%2===0?"⚫ 黒番":"⚪ 白番"}`;
-  document.getElementById('quiz-progress-label').innerHTML = `進捗 ${quizMove}/50手　得点：<span style="color:#e8c964">${quizScore}</span>点`;
+  document.getElementById('quiz-progress-label').innerHTML = `進捗 ${quizAnsweredCount}/${quizTotalCount()}手　得点：<span style="color:#e8c964">${quizScore}</span>点`;
   const qc = document.getElementById('quiz-board');
   qc.style.cursor = makeCursor(quizCurrentColor);
 }
@@ -1556,6 +1716,7 @@ function handleAnswer(cell) {
     // 不正解後の正解は0点、それ以外はbasePoint
     const pts = quizAfterWrong ? 0 : basePoint;
     quizScore += pts;
+    quizAnsweredCount++;
     quizBoardMoves = [...quizBoardMoves, {col:cell.col, row:cell.row, color:quizCurrentColor}];
     drawBoard('quiz-board', quizBoardMoves, {feedback:"correct"});
     const scoreMsg = pts > 0 ? I18N[currentLang].correctPts(pts) : I18N[currentLang].correct;
@@ -1565,8 +1726,9 @@ function handleAnswer(cell) {
       quizFeedback = false;
       quizShowHint = false; quizHintUsed = false; quizHintMoves = [];
       quizAfterWrong = false;
-      const next = quizMove + 1;
-      if (next >= 50) { quizMove = 50; finishQuiz(); return; }
+      // 手番選択で片方のみの場合、対象外の手（相手の手）は自動再現してスキップ
+      const next = advanceToQuizColor(quizMove + 1);
+      if (next >= currentKifu.moves.length) { quizMove = currentKifu.moves.length; finishQuiz(); return; }
       quizMove = next;
       quizBoardMoves = buildBoard(currentKifu, next);
       updateQuizLabels();
@@ -1663,10 +1825,11 @@ function abortQuiz() { clearInterval(quizTimer); finishQuiz(); }
 function finishQuiz() {
   clearInterval(quizTimer);
   const mx = maxScore();
+  const total = quizTotalCount();
 
   const entry = {
-    player: playerName, score: quizScore, answered: quizMove,
-    grade: selectedGrade,
+    player: playerName, score: quizScore, answered: quizAnsweredCount, total,
+    grade: selectedGrade, colorMode: selectedColorMode,
     date: formatDate(new Date()),
     kifu: { title: currentKifu.title, date: currentKifu.date, black: currentKifu.black, white: currentKifu.white }
   };
@@ -1684,22 +1847,23 @@ function finishQuiz() {
     kifu: currentKifu.title,
     grade: selectedGrade,
     score: quizScore,
-    answered: quizMove
+    answered: quizAnsweredCount
   });
   globalScores = null; // キャッシュをクリア（次回ランキング表示時に再取得）
 
-  const ratio = quizScore / mx;
+  const ratio = mx > 0 ? quizScore / mx : 0;
   const t = I18N[currentLang];
   document.getElementById('result-trophy').textContent = ratio>=0.8?"🏆":ratio>=0.5?"⭐":"🎯";
   document.getElementById('result-score').innerHTML = `${quizScore}<span style="font-size:20px">点</span>`;
   document.getElementById('result-player').textContent = `${playerName}`;
   document.getElementById('result-kifu').textContent = `${translateTitle(currentKifu.title)}　【${translateGrade(selectedGrade)}】`;
-  document.getElementById('result-answered').textContent = t.resultAnswered(quizMove, mx);
+  document.getElementById('result-answered').textContent = t.resultAnswered(quizAnsweredCount, mx, total);
   const perf = document.getElementById('result-perfect');
-  perf.textContent = t.resultPerfect;
-  perf.style.display = (quizScore===mx&&quizMove>=50) ? 'block' : 'none';
+  perf.textContent = t.resultPerfect(total);
+  perf.style.display = (quizScore===mx&&quizAnsweredCount>=total) ? 'block' : 'none';
   showScreen('s-result');
 }
+
 
 function playAgain() {
   renderTopKifuList();
@@ -1784,13 +1948,15 @@ function renderScoreList() {
     // ローカルとグローバルで表示形式を合わせる
     const kifuTitle = currentScoreMode === 'global' ? (s.kifu || '') : (s.kifu?.title || '');
     const answered = s.answered;
+    const total = s.total || 50; // 旧データ（手番選択追加前）は50手として扱う
+    const modeBadge = s.colorMode === 'black' ? ' ⚫' : s.colorMode === 'white' ? ' ⚪' : '';
     const date = formatDate(s.date || '');
     item.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px">
         <span style="color:${rankColor};font-weight:700;font-size:14px;min-width:22px">${i+1}</span>
         <div>
           <div style="font-weight:700;color:#e8d5a3">${s.player}</div>
-          <div style="font-size:11px;color:#9ca3af">${kifuTitle}　${answered<50?answered+'手(途中)　':'全50手　'}${date}</div>
+          <div style="font-size:11px;color:#9ca3af">${kifuTitle}${modeBadge}　${answered<total?answered+'手(途中)　':'全'+total+'手　'}${date}</div>
         </div>
       </div>
       <div style="font-size:20px;font-weight:900;color:#e8c964;font-family:monospace">${s.score}<span style="font-size:11px">点</span></div>`;
@@ -2209,10 +2375,11 @@ ${boardText}
     if (player) TomyStamp.setPlayer(player);
     if (!player) return;
 
-    // スコアと最高点（グレードによって異なる）
+    // スコアと最高点（グレード・手番選択によって異なる）
     var qs = (typeof quizScore === 'number') ? quizScore : 0;
     var grade = (typeof selectedGrade === 'string') ? selectedGrade : '上級';
-    var maxScore = grade === '初級' ? 50 : grade === '中級' ? 100 : 200;
+    var maxScore = (typeof window.maxScore === 'function') ? window.maxScore()
+      : (grade === '初級' ? 50 : grade === '中級' ? 100 : 150);
     var pct = maxScore > 0 ? qs / maxScore : 0;
 
     // 棋譜名
