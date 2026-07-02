@@ -1744,25 +1744,39 @@ function handleAnswer(cell) {
       quizFeedback = false;
       quizShowHint = false; quizHintUsed = false; quizHintMoves = [];
       quizAfterWrong = false;
-      // 手番選択で片方のみの場合、対象外の手（相手の手）は自動再現してスキップ
-      const next = advanceToQuizColor(quizMove + 1);
-      if (next >= currentKifu.moves.length) { quizMove = currentKifu.moves.length; finishQuiz(); return; }
-      quizMove = next;
-      quizBoardMoves = buildBoard(currentKifu, next);
-      updateQuizLabels();
-      if (initChoice > 0) {
-        quizHintMoves = makeHints(quizMove, quizBoardMoves, initChoice);
-        quizShowHint = true; quizHintUsed = true;
-        applyHintLegend(initChoice);
-        document.getElementById('btn-hint').style.display = 'none';
-        document.getElementById('quiz-instruction').textContent = hintInstruction(initChoice);
+
+      // 手番選択で片方のみの場合、対象外の手（相手の手）は自動再現される
+      const afterAnswerIdx = quizMove + 1;
+      const next = advanceToQuizColor(afterAnswerIdx);
+
+      const finalizeNext = () => {
+        if (next >= currentKifu.moves.length) { quizMove = currentKifu.moves.length; finishQuiz(); return; }
+        quizMove = next;
+        quizBoardMoves = buildBoard(currentKifu, next);
+        updateQuizLabels();
+        if (initChoice > 0) {
+          quizHintMoves = makeHints(quizMove, quizBoardMoves, initChoice);
+          quizShowHint = true; quizHintUsed = true;
+          applyHintLegend(initChoice);
+          document.getElementById('btn-hint').style.display = 'none';
+          document.getElementById('quiz-instruction').textContent = hintInstruction(initChoice);
+        } else {
+          document.getElementById('hint-legend').style.display = 'none';
+          document.getElementById('btn-hint').style.display = 'inline-block';
+          document.getElementById('quiz-instruction').textContent =
+            `碁盤をクリックして答える　正解で${basePoint}点`;
+        }
+        renderQuizBoard();
+      };
+
+      if (next > afterAnswerIdx && afterAnswerIdx < currentKifu.moves.length) {
+        // 相手の手が自動再現される場合も、どこに打たれたか分かるように点滅させる
+        const opponentBoard = buildBoard(currentKifu, afterAnswerIdx + 1);
+        blinkLastMove('quiz-board', opponentBoard, {});
+        setTimeout(finalizeNext, 650);
       } else {
-        document.getElementById('hint-legend').style.display = 'none';
-        document.getElementById('btn-hint').style.display = 'inline-block';
-        document.getElementById('quiz-instruction').textContent =
-          `碁盤をクリックして答える　正解で${basePoint}点`;
+        finalizeNext();
       }
-      renderQuizBoard();
     }, 700);
   } else {
     drawBoard('quiz-board', quizBoardMoves, {feedback:"wrong", lastWrong:{col:cell.col,row:cell.row}});
