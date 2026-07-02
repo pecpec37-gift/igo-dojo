@@ -1643,7 +1643,15 @@ function startQuiz() {
       `碁盤をクリックして答える　正解で${levelChoice().basePoint}点`;
   }
 
-  renderQuizBoard();
+  if (quizBoardMoves.length > 0) {
+    // 手番選択で片方のみの場合、クイズ開始時に既に盤上にある最後の石を点滅させて分かりやすくする
+    blinkLastMove('quiz-board', quizBoardMoves, {
+      hintMoves: quizShowHint ? quizHintMoves : [],
+      currentColor: quizCurrentColor
+    });
+  } else {
+    renderQuizBoard();
+  }
   showScreen('s-quiz');
   const qc = document.getElementById('quiz-board');
   qc.style.cursor = makeCursor("black");
