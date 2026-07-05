@@ -1343,8 +1343,7 @@ function renderUploadList() {}
 
 function confirmName() {
   const v = document.getElementById('name-input').value.trim();
-  if (!v) return;
-  playerName = v;
+  playerName = v || 'ゲスト';
   document.getElementById('select-sub').textContent = I18N[currentLang].selectSub(playerName);
   const pendingId = document.getElementById('name-input').dataset.pendingKifu;
   if (pendingId) {
@@ -2371,7 +2370,7 @@ ${boardText}
   }
 }
 </script>
-<!-- ⭐ スタンプ送信（とみやんのゲームランド） -->
+<!-- ⭐ スタンプ送信（Tommy-Go） -->
 <script>
 (function() {
   var GAME_ID = 'igo-dojo';
