@@ -1835,16 +1835,48 @@ function makeHints(qm, bm, count=3) {
   }
   nearCands.sort((a, b) => a.dist - b.dist);
 
+  // ── 何線かを判定するヘルパー（col/row は 0〜18、端(0/18)=1線） ──
+  const EDGE = BOARD_SIZE - 1; // 18
+  const lineOf = (col, row) =>
+    Math.min(Math.min(col, EDGE - col), Math.min(row, EDGE - row)) + 1;
+
+  // 正解の線に応じて、選択肢に使ってよい線を決める
+  //   正解4線 → 3線 or 4線
+  //   正解3線 → 3線 or 4線
+  //   正解2線 → 2線 or 3線
+  //   それ以外(1線・5線以上) → 線制約なし（従来通り近傍から出題）
+  const correctLine = lineOf(cp.col, cp.row);
+  let allowedLines = null;
+  if (correctLine === 4)      allowedLines = new Set([3, 4]);
+  else if (correctLine === 3) allowedLines = new Set([3, 4]);
+  else if (correctLine === 2) allowedLines = new Set([2, 3]);
+  const lineOK = x => !allowedLines || allowedLines.has(lineOf(x.col, x.row));
+
   // 距離条件：3択は1〜2路優先、2択は1路優先（いずれも1線除外）
   const need = count - 1;
   const is2nd = x => x.col >= 1 && x.col <= 17 && x.row >= 1 && x.row <= 17;
-  const maxDist1 = count >= 3 ? 2 : 1; // 3択=距離1〜2、2択=距離1
-  const pool     = nearCands.filter(x => x.dist >= 1 && x.dist <= maxDist1 && is2nd(x));
-  const fallback = nearCands.filter(x => x.dist >= 1 && x.dist <= 3 && is2nd(x));
-  const source = pool.length >= need ? pool : (fallback.length >= need ? fallback : nearCands);
+  const shuf  = a => a.slice().sort(() => Math.random() - 0.5);
+  const within = d => x => x.dist >= 1 && x.dist <= d && is2nd(x);
 
-  const shuffled = source.slice().sort(() => Math.random() - 0.5);
-  const cands = shuffled.slice(0, need).map(x => ({ col: x.col, row: x.row }));
+  // 近い順・線条件優先で選択肢を確保（足りなければ段階的にフォールバック）
+  const picked = [];
+  const used = new Set([`${cp.col},${cp.row}`]);
+  const take = arr => {
+    for (const x of arr) {
+      if (picked.length >= need) return;
+      const key = `${x.col},${x.row}`;
+      if (used.has(key)) continue;
+      used.add(key);
+      picked.push({ col: x.col, row: x.row });
+    }
+  };
+  take(shuf(nearCands.filter(x => within(count >= 3 ? 2 : 1)(x) && lineOK(x)))); // ① 最近傍×線条件
+  take(shuf(nearCands.filter(x => within(3)(x) && lineOK(x))));                  // ② やや広め×線条件
+  take(nearCands.filter(x => x.dist >= 1 && is2nd(x) && lineOK(x)));             // ③ 全距離×線条件（距離順）
+  take(shuf(nearCands.filter(x => within(3)(x))));                              // ④ 線条件なし×近傍
+  take(nearCands);                                                              // ⑤ 最終手段（全空点）
+
+  const cands = picked;
 
   return [{ col: cp.col, row: cp.row }, ...cands].sort(() => Math.random() - 0.5);
 }
