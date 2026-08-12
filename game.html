@@ -208,7 +208,7 @@
 <div class="screen" id="s-select">
   <div class="card card-wide">
     <div class="title" style="font-size:22px">棋譜を選択</div>
-    <div class="sub" id="select-sub">プレーヤー：　│　50手を3分以内に記憶</div>
+    <div class="sub" id="select-sub">プレーヤー：　│　54手を3分以内に記憶</div>
     <div class="scroll-list" id="kifu-list"></div>
     <div style="margin-top:14px;text-align:center">
       <button class="btn-ghost" onclick="showScreen('s-upload')">← 棋譜一覧に戻る</button>
@@ -487,7 +487,7 @@ const I18N = {
     notPlayed: "未プレイ", best: "Best",
     halfway: (n) => `${n}手(途中)　`, allMoves: "全50手　",
     resultAnswered: (n,mx,total) => n<total ? `${n}手まで回答（途中終了）` : `${total}手全問回答　最高${mx}点`,
-    selectSub: (name) => `プレーヤー：${name}　│　50手を3分以内に記憶`,
+    selectSub: (name) => `プレーヤー：${name}　│　54手を3分以内に記憶`,
     // 棋譜タイトル翻訳（id -> 表示名）
     titles: {}
   },
@@ -549,7 +549,7 @@ const I18N = {
     notPlayed: "Not played", best: "Best",
     halfway: (n) => `${n} moves (partial)　`, allMoves: "All 50 moves　",
     resultAnswered: (n,mx,total) => n<total ? `Answered ${n} moves (incomplete)` : `All ${total} moves answered　Max ${mx} pts`,
-    selectSub: (name) => `Player: ${name}　│　Memorize 50 moves in 3 min`,
+    selectSub: (name) => `Player: ${name}　│　Memorize 54 moves in 3 min`,
     titles: {
       "第01局": "Game 01", "第02局": "Game 02", "第03局": "Game 03", "第04局": "Game 04",
       "第05局": "Game 05", "第06局": "Game 06", "第07局": "Game 07", "第08局": "Game 08",
@@ -627,7 +627,7 @@ const I18N = {
     notPlayed: "未游玩", best: "最佳",
     halfway: (n) => `${n}手(中途)　`, allMoves: "全50手　",
     resultAnswered: (n,mx,total) => n<total ? `回答了${n}手（未完成）` : `全${total}手答完　最高${mx}分`,
-    selectSub: (name) => `玩家：${name}　│　3分钟内记住50手`,
+    selectSub: (name) => `玩家：${name}　│　3分钟内记住54手`,
     titles: {
       "三連星": "三连星", "二連星": "二连星",
       "松本武久": "松本武久", "柳時熏": "柳时熏", "大橋拓文": "大桥拓文",
@@ -701,7 +701,7 @@ const I18N = {
     notPlayed: "미플레이", best: "Best",
     halfway: (n) => `${n}수(중도)　`, allMoves: "전50수　",
     resultAnswered: (n,mx,total) => n<total ? `${n}수까지 답함（중도 종료）` : `${total}수 전부 답함　최고 ${mx}점`,
-    selectSub: (name) => `플레이어：${name}　│　50수를 3분 안에 기억`,
+    selectSub: (name) => `플레이어：${name}　│　54수를 3분 안에 기억`,
     titles: {
       "三連星": "산렌세이", "二連星": "니렌세이",
       "松本武久": "마쓰모토 타케히사", "柳時熏": "류시쿤", "大橋拓文": "오하시 히로후미",
@@ -1038,6 +1038,9 @@ let studyMove = 0;
 let studyMaxMove = 0;
 let studyTimer = null;
 let studyTimeLeft = 180;
+// クイズ開始時にあらかじめ盤上に並べておく手数（黒1・白2・黒3・白4）
+// この4手は出題せず、クイズは第5手（インデックス4）から開始する
+const PREFILL_MOVES = 4;
 let quizMove = 0;
 let quizScore = 0;
 let quizAnsweredCount = 0; // 実際に出題された問題数（手番選択で片方のみの場合はquizMoveと一致しない）
@@ -1079,7 +1082,7 @@ function parseSGF(text, fileName) {
     const row = SGFCOLS.indexOf(raw[1]);
     if (col < 0 || row < 0 || col > 18 || row > 18) continue;
     moves.push(COLS[col] + (row + 1));
-    if (moves.length >= 50) break;
+    if (moves.length >= 54) break;
   }
   return { black, white, date, title, moves, id: fileName };
 }
@@ -1226,11 +1229,16 @@ function selectColorMode(mode) {
 function updateColorDescLabels() {
   if (!currentKifu) return;
   const total = currentKifu.moves.length;
-  const half = Math.ceil(total / 2);
+  // 先頭PREFILL_MOVES手（黒1〜白4）は出題しないので、第PREFILL_MOVES手以降で集計する
+  let both = 0, black = 0, white = 0;
+  for (let i = PREFILL_MOVES; i < total; i++) {
+    both++;
+    if (i % 2 === 0) black++; else white++;
+  }
   const t = I18N[currentLang];
-  const fmtBoth  = t.colorDescBoth  ? t.colorDescBoth(total) : `全${total}手を出題`;
-  const fmtBlack = t.colorDescBlack ? t.colorDescBlack(half) : `黒番${half}手を出題`;
-  const fmtWhite = t.colorDescWhite ? t.colorDescWhite(total - half) : `白番${total - half}手を出題`;
+  const fmtBoth  = t.colorDescBoth  ? t.colorDescBoth(both)   : `全${both}手を出題`;
+  const fmtBlack = t.colorDescBlack ? t.colorDescBlack(black) : `黒番${black}手を出題`;
+  const fmtWhite = t.colorDescWhite ? t.colorDescWhite(white) : `白番${white}手を出題`;
   const elBoth = document.getElementById('color-desc-both');
   const elBlack = document.getElementById('color-desc-black');
   const elWhite = document.getElementById('color-desc-white');
@@ -1280,7 +1288,8 @@ function quizTotalCount() {
   if (!currentKifu) return 0;
   const total = currentKifu.moves.length;
   let c = 0;
-  for (let i = 0; i < total; i++) if (isQuizColor(i)) c++;
+  // 先頭PREFILL_MOVES手（黒1〜白4）は出題しないので数えない
+  for (let i = PREFILL_MOVES; i < total; i++) if (isQuizColor(i)) c++;
   return c;
 }
 
@@ -1621,8 +1630,9 @@ function startQuiz() {
   quizBoardMoves = [];
   quizCurrentColor = "black";
 
-  // 手番選択で片方のみの場合、対象外の手は自動再現しつつ最初の出題手まで進める
-  quizMove = advanceToQuizColor(0);
+  // 黒1・白2・黒3・白4はあらかじめ盤上に表示し、クイズは第5手から開始する
+  // （手番選択で片方のみの場合、対象外の手は自動再現しつつ最初の出題手まで進める）
+  quizMove = advanceToQuizColor(PREFILL_MOVES);
   quizBoardMoves = buildBoard(currentKifu, quizMove);
 
   updateQuizTimer();
