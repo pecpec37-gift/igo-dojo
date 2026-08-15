@@ -44,6 +44,9 @@
   .btn-ghost { background: transparent; border: 1px solid rgba(200,168,75,0.33); color: #e8d5a3; padding: 10px 22px; border-radius: 8px; cursor: pointer; font-size: 14px; font-family: inherit; }
   .btn-danger { background: transparent; border: 1px solid rgba(248,113,113,0.33); color: #f87171; padding: 9px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: inherit; }
   .btn:disabled, .btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
+  .bs-tab { background: rgba(255,255,255,0.04); border: 1px solid rgba(200,168,75,0.33); color: #9ca3af; padding: 8px 26px; border-radius: 100px; cursor: pointer; font-size: 14px; font-weight: 700; font-family: inherit; letter-spacing: 2px; transition: all .2s; }
+  .bs-tab:hover { color: #e8d5a3; border-color: rgba(200,168,75,0.6); }
+  .bs-tab.active { background: linear-gradient(135deg, #92703a, #c8a84b); border-color: transparent; color: #0a0a0f; }
   input { background: rgba(255,255,255,0.07); border: 1px solid rgba(200,168,75,0.27); color: #e8d5a3; padding: 10px 14px; border-radius: 8px; font-size: 15px; width: 100%; font-family: inherit; outline: none; }
   .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .badge-black { background: #111; color: #eee; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; border: 1px solid #555; }
@@ -172,6 +175,10 @@
       <div id="challenge-count" style="margin-top:10px;font-size:12px;color:#9ca3af;letter-spacing:1px">
         累計チャレンジ回数：読み込み中...
       </div>
+    </div>
+    <div id="board-size-tabs" style="display:flex;gap:10px;justify-content:center;margin:2px 0 16px">
+      <button class="bs-tab active" id="bs-19" onclick="setBoardSize(19)">19路盤</button>
+      <button class="bs-tab" id="bs-13" onclick="setBoardSize(13)">13路盤</button>
     </div>
     <div class="scroll-list" id="top-kifu-list"></div>
     <div id="challenge-start-area" style="display:none;text-align:center;padding:20px 0">
@@ -761,6 +768,7 @@ function applyLang(lang) {
   // トップ画面
   setText('top-mode-title', t.gameTitle);
   setText('top-mode-sub', t.gameSub);
+  if (typeof updateTopModeSub === 'function') updateTopModeSub(); // 路数・局数を反映（通常モード時）
   setText('upload-scores-btn', null, `<button class="btn-ghost" onclick="showScreen('s-scores')">${t.scoreBtn}</button>`);
 
   // 名前入力
@@ -891,9 +899,20 @@ function setAttr(screenId, selector, text) {
 }
 
 // ===== 定数 =====
-const BOARD_SIZE = 19;
+// BOARD_SIZE は現在プレイ中の棋譜の路数（13 または 19）。棋譜選択時に切り替える。
+let BOARD_SIZE = 19;
 const COLS = "ABCDEFGHJKLMNOPQRST";
 const SGFCOLS = "abcdefghijklmnopqrs";
+
+// 盤サイズごとの星（天元・隅・辺）の座標（0始まり）
+function starPoints(n) {
+  const cross = (arr) => { const r = []; for (const y of arr) for (const x of arr) r.push([x, y]); return r; };
+  if (n === 19) return cross([3, 9, 15]);
+  if (n === 13) { const r = cross([3, 9]); r.push([6, 6]); return r; }   // 隅4点＋天元
+  if (n === 9)  { const r = cross([2, 6]); r.push([4, 4]); return r; }
+  const m = (n - 1) / 2;
+  return Number.isInteger(m) ? [[m, m]] : [];
+}
 
 // ===== Google Apps Script API =====
 const GAS_URL = "https://script.google.com/macros/s/AKfycbyb8bmSkSMsdHxf6pXhHyt11SfOkH44dCO6Pa90DHLpcwT3O5FPKcV8Dmz-aTni8kOqEg/exec";
@@ -1027,9 +1046,34 @@ const KIFU_DATA = [
     sgf:`(;GM[1]FF[4]SZ[19]PB[柯潔]BR[九段]PW[韓相朝]WR[六段]KM[6.5]RE[B+R]DT[2024-09-30]GN[第29回LG杯朝鮮日報棋王戦3回戦];B[pd];W[dd];B[pp];W[dp];B[fc];W[qq];B[pq];W[qp];B[po];W[rn];B[cf];W[df];B[dg];W[ef];B[cd];W[cc];B[ce];W[dc];B[ic];W[he];B[ch];W[jd];B[jc];W[kd];B[lc];W[me];B[jf];W[kc];B[kb];W[ld];B[mc];W[jb];B[ib];W[lb];B[ja];W[nc];B[mb];W[nb];B[qc];W[pf];B[of];W[md];B[la];W[pe];B[od];W[oe];B[nd];W[ne];B[qr];W[rr];B[ro];W[pr];B[qo];W[pk];B[or];W[qs];B[kq];W[fh];B[nj];W[nk];B[mk];W[nl];B[pj];W[mj];B[ni];W[lk];B[qk];W[pl];B[mi];W[ml];B[rl];W[li];B[lh];W[ki];B[de];W[ee];B[ed];W[eb];B[cn];W[rm];B[qi];W[rj];B[qj];W[qm];B[qg];W[nq];B[oq];W[np];B[sq];W[sr];B[lr];W[iq];B[ip];W[hp];B[io];W[hq];B[no];W[mo];B[mn];W[nn];B[oo];W[lo];B[mp];W[lp];B[mq];W[pg];B[ph];W[qd];B[rd];W[rg];B[re];W[rf];B[mg];W[kg];B[kh];W[jh];B[jg];W[kf];B[og];W[fd];B[gd];W[ec];B[cq];W[cp];B[dq];W[bq];B[br];W[bp];B[fq];W[fp];B[gp];W[ep];B[gq];W[go];B[ho];W[eq];B[er];W[dr];B[gn];W[fo];B[fr];W[cr];B[jq];W[cj];B[dj];W[dk];B[ck];W[di];B[bj];W[ej];B[bl];W[qe];B[pc];W[il];B[ge];W[hf];B[jm];W[im];B[jn];W[jl];B[ln];W[cl];B[bk];W[hn];B[dl];W[dm];B[cm];W[el];B[eg];W[fg];B[gf];W[gg];B[bc];W[bb];B[bd];W[ci];B[bi];W[gc];B[hd];W[id];B[hc];W[oh];B[oi];W[ng];B[nh];W[nf];B[ql];W[om];B[rh];W[gb];B[ab];W[ba];B[in];W[hm];B[dn];W[km];B[kn];W[em];B[eh];W[ei];B[sp];W[rq];B[os];W[ps];B[bo];W[gs];B[gr])` },
 ];
 
+// ===== 13路盤 棋譜データ =====
+const KIFU_DATA_13 = [
+  { id:"g13_01", title:"13路 天頂7d 自己対局", black:"天頂7d", white:"天頂7d", date:"2026-08-13", level:"初級",
+    sgf:`(;GM[1]FF[4]AP[Zenith:7.0]SZ[13]HA[0]KM[6.5]CA[UTF-8]PB[天頂の囲碁 七段]BR[7d]PW[天頂の囲碁 七段]WR[7d]ZT[10]DT[2026-08-13]RE[B+Resign];B[jd];W[dd];B[fc];W[cf];B[dk];W[jj];B[hk];W[kh];B[kk];W[jk];B[jl];W[il];B[kl];W[ik];B[li];W[ki];B[lh];W[hj];B[kg];W[jg];B[kf];W[hc];B[hd];W[ic];B[jc];W[id];B[ie];W[gd];B[he];W[gc];B[dc];W[cc];B[ed];W[db];B[eb];W[ec];B[gj];W[gk];B[dc];W[jb];B[kb];W[ec];B[fk];W[hl];B[dc];W[ee];B[ec];W[cb];B[de];W[ef];B[cd];W[bd];B[df];W[dg];B[fe];W[ge];B[ff];W[eg];B[gf];W[je];B[jf];W[kc];B[kd];W[ka];B[lb];W[la];B[lc];W[fd];B[gb])` },
+  { id:"g13_02", title:"13路 天頂8d 自己対局", black:"天頂8d", white:"天頂8d", date:"2026-08-13", level:"中級",
+    sgf:`(;GM[1]FF[4]AP[Zenith:7.0]SZ[13]HA[0]KM[6.5]CA[UTF-8]PB[天頂の囲碁 八段]BR[8d]PW[天頂の囲碁 八段]WR[8d]ZT[10]DT[2026-08-13]RE[W+Resign];B[jd];W[dd];B[fc];W[cf];B[dk];W[kj];B[ik];W[ci];B[kh];W[jk];B[ij];W[il];B[hl];W[jl];B[dg];W[cg];B[dc];W[cc];B[cd];W[ec];B[db];W[ed];B[cb];W[bc];B[bd];W[bb];B[ba];W[eb];B[ac];W[hc];B[hd];W[ic];B[id];W[jc];B[kc];W[kb];B[lb];W[gd];B[ge];W[fd];B[kd];W[gk];B[gl];W[ek];B[dj];W[fl];B[hk];W[dl];B[cl];W[ck];B[cj];W[bk];B[li];W[lj];B[ej];W[gj];B[gi];W[bj];B[hj];W[fk];B[fm];W[bl];B[ll];W[ki];B[lh];W[ji];B[hh];W[jh];B[kf];W[jg];B[hf];W[im];B[kl];W[kg];B[lg];W[lf];B[mj];W[mk];B[le];W[jf];B[mf];W[km];B[lm];W[gg];B[fg];W[hg];B[ig];W[ih];B[gh];W[if];B[gf];W[ig];B[ef];W[jb];B[mi];W[lk];B[jm];W[da];B[ab];W[km];B[fj];W[el];B[jm];W[eh];B[fh];W[km];B[em];W[cm];B[jm];W[fe];B[ff];W[km];B[dh];W[kk];B[jm];W[ii];B[hi];W[km];B[ch];W[ml])` },
+  { id:"g13_03", title:"13路 天頂9d vs win天頂9d ①", black:"天頂9d", white:"win天頂9d", date:"2026-08-14", level:"上級",
+    sgf:`(;GM[1]FF[4]AP[Zenith:7.0]SZ[13]HA[0]KM[6.5]CA[UTF-8]PB[天頂の囲碁 10 秒]BR[+]PW[天頂の囲碁 10 秒]WR[+]ZT[10]DT[2026-08-14]RE[W+Resign];B[jc];W[kj];B[ik];W[dk];B[kg];W[ji];B[fk];W[jk];B[ci];W[ej];B[gi];W[dh];B[cg];W[dc];B[fh];W[eh];B[dd];W[cc];B[ed];W[ec];B[bj];W[df];B[be];W[ff];B[fd];W[hf];B[ig];W[hh];B[fg];W[cd];B[ce];W[de];B[fc];W[fe];B[eb];W[hc];B[db];W[cb];B[hd];W[id];B[ic];W[gd];B[hb];W[he];B[gc];W[il];B[hl];W[hk];B[ij];W[gl];B[ii];W[hm];B[jh];W[kh];B[hg];W[jf];B[jg];W[lh];B[jj];W[kk];B[ki];W[li];B[le];W[kd];B[jd];W[je];B[lg];W[ke];B[ld];W[kc];B[lc];W[ib];B[hd];W[ch];B[bh];W[hc];B[jb];W[gb];B[hd];W[cf];B[bf];W[hc];B[ia];W[fb];B[hd];W[bg])` },
+  { id:"g13_04", title:"13路 win天頂9d vs 天頂9d", black:"win天頂9d", white:"天頂9d", date:"2026-08-14", level:"上級",
+    sgf:`(;GM[1]FF[4]AP[Zenith:7.0]SZ[13]HA[0]KM[6.5]CA[UTF-8]PB[天頂の囲碁 15 秒]BR[+]PW[天頂の囲碁 15 秒]WR[+]ZT[15]DT[2026-08-14]RE[B+Resign];B[jd];W[dj];B[dc];W[ce];B[ch];W[ed];B[dd];W[de];B[ee];W[ec];B[eb];W[fb];B[db];W[gd];B[df];W[cf];B[dg];W[bc];B[bb];W[bd];B[ab];W[ef];B[fe];W[gf];B[ff];W[fg];B[ge];W[he];B[eg];W[fd];B[ef];W[id];B[jc];W[gg];B[fh];W[gh];B[fi];W[ea];B[da];W[ba];B[bg];W[fa];B[cb];W[bf];B[bi];W[bj];B[ae];W[af];B[fk];W[ek];B[fl];W[di];B[dh];W[el];B[gi];W[ig];B[jj];W[kg];B[hc];W[hd];B[jf];W[ii];B[ij];W[le];B[ld];W[ke];B[je];W[jg];B[gb];W[lc];B[lb];W[kd];B[kc];W[md];B[ga];W[fc];B[bk];W[aj];B[cl];W[cj];B[fm];W[dl];B[dm];W[em];B[ej];W[dk];B[bm];W[al];B[li];W[mb];B[la];W[hb];B[ib];W[gc];B[ha];W[ic];B[hf];W[hb];B[kf];W[if];B[lf];W[ei];B[eh];W[fj];B[gj];W[ki];B[kj];W[lh];B[mf];W[lj];B[hc];W[ie];B[lk];W[hb];B[ag];W[me];B[ja];W[kb];B[ka];W[ia];B[ha];W[mi];B[bl];W[ll];B[kk];W[mk];B[kl];W[ad];B[cg];W[aa];B[cd];W[be];B[cc];W[ak];B[ej];W[km];B[jm];W[fj];B[hh];W[hg];B[ej];W[lg];B[jb])` },
+  { id:"g13_05", title:"13路 天頂9d vs win天頂9d ②", black:"天頂9d", white:"win天頂9d", date:"2026-08-15", level:"上級",
+    sgf:`(;GM[1]FF[4]AP[Zenith:7.0]SZ[13]HA[0]KM[6.5]CA[UTF-8]PB[天頂の囲碁 20 秒]BR[+]PW[天頂の囲碁 20 秒]WR[+]ZT[20]DT[2026-08-15]RE[W+Resign];B[jd];W[dc];B[jk];W[cj];B[ek];W[di];B[de];W[fc];B[cc];W[cb];B[cd];W[bb];B[ch];W[dh];B[cg];W[gj];B[fi];W[fj];B[ej];W[ei];B[gl];W[fh];B[gi];W[hj];B[gh];W[gg];B[hh];W[jj];B[kj];W[kk];B[ij];W[ji];B[ik];W[ii];B[hg];W[hi];B[kl];W[lk];B[ll];W[hl];B[lj];W[fl];B[el];W[fk];B[bk];W[dl];B[bj];W[hf];B[ig];W[ck];B[hc];W[kd];B[kc];W[ke];B[jc];W[if];B[jg];W[jf];B[kh];W[ff];B[ge];W[gf];B[kf];W[lf];B[kg];W[je];B[bl];W[gb];B[hb];W[lc];B[lb];W[ld];B[ed];W[il];B[jl];W[mb];B[la];W[lg];B[lh];W[bc];B[eg];W[fd];B[fe];W[ef];B[dg];W[ee];B[ec];W[eb];B[dd];W[gd];B[dm];W[cm];B[fm];W[em];B[db];W[id];B[dm];W[cl];B[hk];W[gk];B[hm];W[gm];B[ea];W[fb];B[gl];W[em];B[hd];W[he];B[dm];W[gm];B[jb];W[ka];B[gl];W[em])` },
+  { id:"g13_06", title:"13路 天頂9d vs win天頂9d ③", black:"天頂9d", white:"win天頂9d", date:"2026-08-15", level:"上級",
+    sgf:`(;GM[1]FF[4]AP[Zenith:7.0]SZ[13]HA[0]KM[6.5]CA[UTF-8]PB[天頂の囲碁 15 秒]BR[+]PW[天頂の囲碁 15 秒]WR[+]ZT[15]DT[2026-08-15]RE[W+0.5];B[kd];W[dj];B[jk];W[dc];B[fk];W[ch];B[hc];W[ki];B[kg];W[hk];B[ij];W[hj];B[hi];W[fj];B[gj];W[gk];B[gi];W[fl];B[ek];W[el];B[dk];W[ej];B[ck];W[cj];B[il];W[bk];B[ik];W[gl];B[gf];W[lk];B[lh];W[kc];B[ld];W[fc];B[cc];W[cd];B[dd];W[de];B[ed];W[ec];B[ce];W[bd];B[ee];W[hd];B[ic];W[id];B[jc];W[li];B[kl];W[ii];B[ih];W[ji];B[ll];W[hg];B[gg];W[hh];B[gh];W[hf];B[if];W[ge];B[ig];W[he];B[ff];W[gc];B[df];W[bc];B[cg];W[jd];B[kb];W[hb];B[ib];W[ia];B[lc];W[dh];B[bf];W[jf];B[jg];W[ke];B[le];W[gb];B[bh];W[bi];B[ah];W[eg];B[be];W[hm];B[im];W[ml];B[kk];W[mi];B[kj];W[lj];B[mk];W[lm];B[hl];W[gm];B[cb];W[bb];B[jm];W[ad];B[ja];W[ae];B[af];W[ha];B[ai];W[aj];B[fi];W[ei];B[kf];W[ef];B[fe];W[je];B[dg];W[fh];B[ie];W[gd];B[fd];W[eh];B[de];W[fg];B[cl];W[bl];B[bm];W[al];B[ci];W[di];B[em];W[dl];B[cm];W[am];B[ba];W[db];B[ca];W[da];B[ab];W[aa];B[lg];W[mh];B[mg];W[mj];B[jj];W[mm];B[jh];W[mf];B[lf];W[dm];B[kh];W[bg];B[ag];W[ac];B[mk];W[];B[])` },
+  { id:"g13_07", title:"13路 天頂9d vs win天頂9d ④", black:"天頂9d", white:"win天頂9d", date:"2026-08-15", level:"上級",
+    sgf:`(;GM[1]FF[4]AP[Zenith:7.0]SZ[13]HA[0]KM[6.5]CA[UTF-8]PB[天頂の囲碁 30 秒]BR[+]PW[天頂の囲碁 30 秒]WR[+]ZT[30]DT[2026-08-15]RE[W+Resign];B[jd];W[dd];B[jj];W[dj];B[fc];W[hk];B[cf];W[fd];B[gd];W[fe];B[cc];W[ec];B[cd];W[gc];B[hc];W[fb];B[fk];W[hb];B[kh];W[ch];B[cg];W[ek];B[fj];W[jk];B[kk];W[kl];B[kj];W[il];B[hj];W[lk];B[ib];W[dh];B[ha];W[db];B[cb];W[hd];B[gb];W[ge];B[ll];W[lm];B[jf];W[gj];B[ck];W[el];B[cj];W[ci];B[gi];W[ij];B[gk];W[ii];B[hl];W[ik];B[ei];W[di];B[fg];W[eh];B[ef];W[jg];B[jh];W[fh];B[gh];W[ih];B[hg];W[kg];B[ig];W[lg];B[lh];W[le];B[ke];W[lf];B[ld];W[ji];B[bj];W[bi];B[bl];W[cm];B[bm];W[ak];B[aj];W[al];B[dm];W[dl];B[cl];W[em];B[ai];W[ah];B[bg];W[bh];B[fl];W[dk];B[ag];W[cm];B[lj];W[ml];B[dm];W[bk];B[ej];W[cm];B[me];W[ki];B[dm];W[ic];B[fi];W[cm];B[am];W[ak];B[dg];W[bk])` },
+  { id:"g13_08", title:"13路 林書陽 vs 陳詩渊（張栩杯 第一局）", black:"林書陽", white:"陳詩渊", date:"2010-03-03", level:"上級",
+    sgf:`(;EV[第1回張栩杯13路决戦三番棋第一局]DT[2010-03-03]PC[]SZ[13]KM[6.5]US[棋聖道場]SO[]PB[林書陽]BR[六段]PW[陳詩渊]WR[八段]RE[B+R];B[kd];W[dc];B[jj];W[dk];B[di];W[ce];B[fj];W[id];B[ie];W[he];B[je];W[kc];B[hd];W[ic];B[hf];W[ge];B[gf];W[gd];B[kk];W[fl];B[ck];W[cl];B[cj];W[hk];B[bl];W[hi];B[il];W[hl];B[ij];W[hj];B[el];W[ek];B[dl];W[ig];B[ih];W[hh];B[jg];W[fi];B[fg];W[ej];B[ee];W[ff];B[gg];W[em];B[cm];W[hm];B[ec];W[lc];B[gc];W[hc];B[dd];W[cd];B[cc];W[bc];B[db];W[bb];B[ei];W[gj];B[fh];W[fk];B[bf];W[be];B[cf];W[af];B[gb];W[cb];B[ld];W[hb];B[ag];W[dc];B[de];W[ae];B[bg];W[jl];B[kl];W[eb];B[cc];W[jd];B[ke])` },
+  { id:"g13_09", title:"13路 陳詩渊 vs 林書陽（張栩杯）", black:"陳詩渊", white:"林書陽", date:"2010-03-03", level:"上級",
+    sgf:`(;GM[1]FF[4]AP[Zenith:7.0]SZ[13]HA[0]KM[6.5]CA[UTF-8]PB[陳詩]BR[]PW[林書陽]WR[]ZT[10]DT[2010-03-03]RE[B+R];B[ke];W[dj];B[jk];W[dc];B[ce];W[id];B[ed];W[ec];B[gd];W[fc];B[ie];W[je];B[jd];W[jf];B[kd];W[he];B[ic];W[if];B[fk];W[ch];B[fd];W[hd];B[hc];W[gc];B[ff];W[kf];B[bc];W[bb];B[hg];W[kb];B[jb];W[hf];B[cg];W[dg];B[bg];W[bh];B[ei];W[dk];B[kh];W[jh];B[ki];W[gg];B[dh];W[gi];B[eh];W[ci];B[cb];W[cc];B[ba];W[ab];B[ac];W[db];B[aa];W[hb];B[ib];W[ha];B[ia];W[fb];B[lb];W[ik];B[jl];W[gk];B[fj];W[le];B[ld];W[jj];B[kj];W[ji];B[el];W[dl];B[il];W[hl];B[ij];W[hk];B[kg];W[lg];B[jg];W[ih];B[ig];W[hh];B[gf];W[lh];B[li];W[lk];B[kk];W[ll];B[mh])` },
+  { id:"g13_10", title:"13路 石田芳夫 vs 高尾紳路（プロ選抜決勝）", black:"石田芳夫", white:"高尾紳路", date:"2014-08-31", level:"上級",
+    sgf:`(;SZ[13]EV[2014クラウドファンディング13路盤選抜プロトーナメント戦決勝]DT[2014/08/31]KM[6.5]PB[石田芳夫]PW[高尾紳路]PC[東京日本棋院]RE[B+R];B[jd];W[cj];B[kj];W[dc];B[ek];W[ij];B[gk];W[di];B[jh];W[kk];B[lk];W[jk];B[hi];W[hk];B[hl];W[il];B[gl];W[ll];B[cl];W[ce];B[ic];W[gc];B[ee];W[de];B[ec];W[eb];B[ed];W[fb];B[lj];W[ml];B[dg];W[cg];B[eg];W[dh];B[hd];W[gd];B[ge];W[kc];B[kd];W[ld];B[lb];W[he];B[hf];W[ie];B[if];W[je];B[ke];W[jf];B[id];W[gf];B[fe];W[ig];B[hg];W[ji];B[kh];W[hh];B[gg];W[gh];B[fg];W[ih];B[jg];W[bl];B[ck];W[bk];B[hj];W[ki];B[lh];W[ii];B[li];W[hb];B[ik];W[jl];B[bj];W[bi];B[dj];W[aj];B[ei];W[hk];B[ib];W[cm];B[dm];W[bm];B[ik];W[jj];B[im];W[jm];B[el];W[ia];B[ja];W[ha];B[jb];W[df];B[dd];W[cd];B[gi];W[fh];B[eh];W[fi];B[fj];W[hk];B[ch];W[ci];B[ik];W[hm];B[ef];W[hk];B[cf];W[bf];B[bg];W[bh];B[ik];W[mk];B[mj];W[hk];B[db];W[cc];B[ik];W[dl];B[dk];W[hk];B[cb];W[gj];B[bb];W[bc];B[hc];W[gb];B[ab];W[ea])` },
+];
+
 // ===== 状態 =====
 let kifuList = [];
 let currentFilter = '全て';
+let selectedBoardSize = 19; // TOP画面で選択中の路数（19 または 13）
 let playerName = "";
 let currentKifu = null;
 let selectedGrade = '上級'; // プレイヤーが選択したグレード
@@ -1069,22 +1113,24 @@ try { scores = JSON.parse(localStorage.getItem("igo_scores") || "[]"); } catch {
 // ===== SGFパーサー =====
 function parseSGF(text, fileName) {
   const get = k => { const m = text.match(new RegExp(k + "\\[([^\\]]*?)\\]")); return m ? m[1] : ""; };
+  const size = parseInt(get("SZ")) || 19; // SZ[13] / SZ[19]。無指定は19路とみなす
   const black = get("PB") || "黒";
   const white = get("PW") || "白";
   const date  = get("DT") || get("DA") || "";
   const title = get("GN") || get("EV") || get("RO") || fileName.replace(/\.sgf$/i, "");
-  const moveRe = /;[BW]\[([a-s]{0,2})\]/g;
+  // 「;」の直後に改行・空白が入るSGF（例：Zenith書き出し）にも対応するため \s* を許容
+  const moveRe = /;\s*[BW]\[([a-s]{0,2})\]/g;
   const moves = []; let m;
   while ((m = moveRe.exec(text)) !== null) {
     const raw = m[1];
     if (!raw || raw.length !== 2) continue;
     const col = SGFCOLS.indexOf(raw[0]);
     const row = SGFCOLS.indexOf(raw[1]);
-    if (col < 0 || row < 0 || col > 18 || row > 18) continue;
+    if (col < 0 || row < 0 || col >= size || row >= size) continue;
     moves.push(COLS[col] + (row + 1));
     if (moves.length >= 54) break;
   }
-  return { black, white, date, title, moves, id: fileName };
+  return { black, white, date, title, moves, size, id: fileName };
 }
 
 function parseMove(mv) { return { col: COLS.indexOf(mv[0]), row: parseInt(mv.slice(1)) - 1 }; }
@@ -1160,9 +1206,10 @@ function showScreen(id) {
 
 // ===== 棋譜データ初期化（SGFをパースしてkifuListに格納） =====
 function initKifuList() {
-  kifuList = KIFU_DATA.map(k => {
+  kifuList = [...KIFU_DATA, ...KIFU_DATA_13].map(k => {
     const parsed = parseSGF(k.sgf, k.id);
-    return { ...parsed, title: k.title, date: k.date, level: k.level, id: k.id };
+    // size は SGF の SZ から検出（parsed.size）。データ側に size があればそれを優先。
+    return { ...parsed, title: k.title, date: k.date, level: k.level, id: k.id, size: k.size || parsed.size };
   });
 }
 initKifuList();
@@ -1171,6 +1218,7 @@ initKifuList();
 function renderTopKifuList() {
   const el = document.getElementById('top-kifu-list');
   const list = kifuList
+    .filter(k => (k.size || 19) === selectedBoardSize)
     .slice()
     .sort((a, b) => a.title.localeCompare(b.title, 'ja'));
   el.innerHTML = '';
@@ -1199,6 +1247,25 @@ function renderTopKifuList() {
   });
 }
 
+// TOP画面：19路盤／13路盤の切り替え
+function setBoardSize(sz) {
+  selectedBoardSize = sz;
+  const b19 = document.getElementById('bs-19'), b13 = document.getElementById('bs-13');
+  if (b19) b19.classList.toggle('active', sz === 19);
+  if (b13) b13.classList.toggle('active', sz === 13);
+  renderTopKifuList();
+  updateTopModeSub();
+}
+
+// TOP画面のサブ見出しに、選択中の路数と収録局数を表示（通常モード時）
+function updateTopModeSub() {
+  if (gameMode !== 'game') return;
+  const subEl = document.getElementById('top-mode-sub');
+  if (!subEl) return;
+  const count = kifuList.filter(k => (k.size || 19) === selectedBoardSize).length;
+  subEl.textContent = `${selectedBoardSize}路盤　全${count}局　棋譜を選択 → 記憶 → 再現 → 採点`;
+}
+
 function startStudyDirect(k) {
   showScreen('s-name');
   setTimeout(() => {
@@ -1210,6 +1277,7 @@ function startStudyDirect(k) {
 // 棋譜選択後→手番選択画面へ
 function goToGradeSelect(k) {
   currentKifu = k;
+  BOARD_SIZE = k.size || 19; // この棋譜の路数に切り替え
   const label = `${translateTitle(k.title)}　${translateTitle(k.black)} vs ${translateTitle(k.white)}`;
   document.getElementById('color-kifu-name').textContent = label;
   updateColorDescLabels();
@@ -1303,24 +1371,29 @@ function initMode() {
   const subEl = document.getElementById('top-mode-sub');
   const listEl = document.getElementById('top-kifu-list');
   const challengeEl = document.getElementById('challenge-start-area');
+  const tabsEl = document.getElementById('board-size-tabs');
   if (gameMode === 'challenge') {
     titleEl.textContent = '🎲 チャレンジモード';
     subEl.textContent = 'ランダム棋譜 → 記憶 → 再現 → 採点';
     listEl.style.display = 'none';
     challengeEl.style.display = 'block';
+    if (tabsEl) tabsEl.style.display = 'flex'; // 路数はチャレンジでも選べるようにする
   } else if (gameMode === 'ai') {
     titleEl.textContent = '🤖 AI検討モード';
-    subEl.textContent = '棋譜を選択 → AI研究（時間制限なし・採点なし）';
+    subEl.textContent = `${selectedBoardSize}路盤　棋譜を選択 → AI研究（時間制限なし・採点なし）`;
+    if (tabsEl) tabsEl.style.display = 'flex';
   } else {
     titleEl.textContent = '囲碁棋譜記憶力ゲーム';
-    subEl.textContent = '棋譜を選択 → 記憶 → 再現 → 採点　全40局収録';
+    if (tabsEl) tabsEl.style.display = 'flex';
+    updateTopModeSub();
   }
 }
 
-// チャレンジモード：ランダム棋譜選択
+// チャレンジモード：ランダム棋譜選択（選択中の路数から）
 function startChallenge() {
-  if (kifuList.length === 0) return;
-  const k = kifuList[Math.floor(Math.random() * kifuList.length)];
+  const pool = kifuList.filter(k => (k.size || 19) === selectedBoardSize);
+  if (pool.length === 0) return;
+  const k = pool[Math.floor(Math.random() * pool.length)];
   if (playerName) { goToGradeSelect(k); } else { startStudyDirect(k); }
 }
 
@@ -1368,7 +1441,7 @@ function confirmName() {
 function renderKifuList() {
   const el = document.getElementById('kifu-list');
   el.innerHTML = '';
-  kifuList.forEach(k => {
+  kifuList.filter(k => (k.size || 19) === selectedBoardSize).forEach(k => {
     const item = document.createElement('div');
     item.className = 'kifu-item';
     item.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
@@ -1433,7 +1506,7 @@ function drawBoard(canvasId, moves, opts={}) {
 
   // 星
   ctx.fillStyle="#5C3D11";
-  for (const r of [3,9,15]) for (const c of [3,9,15]) { ctx.beginPath();ctx.arc(MARGIN+c*CELL,MARGIN+r*CELL,2.5,0,Math.PI*2);ctx.fill(); }
+  for (const [c,r] of starPoints(BOARD_SIZE)) { ctx.beginPath();ctx.arc(MARGIN+c*CELL,MARGIN+r*CELL,2.5,0,Math.PI*2);ctx.fill(); }
 
   // ヒントA/B/C
   const HC=["#3b82f6","#f59e0b","#10b981"];
@@ -1521,6 +1594,7 @@ function makeCursor(color) {
 // ===== 学習フェーズ =====
 function startStudy(k) {
   currentKifu = k;
+  BOARD_SIZE = k.size || 19; // この棋譜の路数に切り替え
   studyMove = 0;
   studyMaxMove = k.moves.length;
   studyTimeLeft = 180;
@@ -1864,7 +1938,7 @@ function makeHints(qm, bm, count=3) {
 
   // 距離条件：3択は1〜2路優先、2択は1路優先（いずれも1線除外）
   const need = count - 1;
-  const is2nd = x => x.col >= 1 && x.col <= 17 && x.row >= 1 && x.row <= 17;
+  const is2nd = x => x.col >= 1 && x.col <= BOARD_SIZE-2 && x.row >= 1 && x.row <= BOARD_SIZE-2;
   const shuf  = a => a.slice().sort(() => Math.random() - 0.5);
   const within = d => x => x.dist >= 1 && x.dist <= d && is2nd(x);
 
@@ -2165,7 +2239,7 @@ function drawAIBoard(candidates) {
     ctx.beginPath(); ctx.moveTo(MARGIN, p); ctx.lineTo(MARGIN + (BOARD_SIZE-1)*CELL, p); ctx.stroke();
   }
   ctx.fillStyle = '#5C3D11';
-  for (const r of [3,9,15]) for (const c of [3,9,15]) {
+  for (const [c,r] of starPoints(BOARD_SIZE)) {
     ctx.beginPath(); ctx.arc(MARGIN+c*CELL, MARGIN+r*CELL, 2.5, 0, Math.PI*2); ctx.fill();
   }
 
@@ -2221,20 +2295,19 @@ function drawAIBoard(candidates) {
 
 // 盤面状態をテキスト化（AIプロンプト用）
 function boardToText() {
+  const N = BOARD_SIZE;
   const moves = buildBoard(currentKifu, studyMove);
-  const COLS19 = 'ABCDEFGHJKLMNOPQRST';
-  const grid = Array.from({length: 19}, () => Array(19).fill('.'));
+  const grid = Array.from({length: N}, () => Array(N).fill('.'));
   moves.forEach(({col, row, color}) => { grid[row][col] = color === 'black' ? '●' : '○'; });
+  const lastCol = COLS[N - 1]; // 13路=N, 19路=T
 
-  // 盤面テキスト（テキストの上=行1=下辺、テキストの下=行19=上辺 とAIに明示）
-  // AIはテキストを上から読むため、行1を上に置くと「上辺=1段目」と誤認する。
-  // そこで行19を上に置き、「テキスト上端=上辺=行19」と明示する。
+  // 盤面テキスト（テキスト上端=上辺=行N、下端=下辺=行1 とAIに明示）
   let text = '     ';
-  for (let c = 0; c < 19; c++) text += COLS19[c] + ' ';
+  for (let c = 0; c < N; c++) text += COLS[c] + ' ';
   text += '  ← 列\n';
-  for (let r = 18; r >= 0; r--) {
+  for (let r = N - 1; r >= 0; r--) {
     const rowLabel = String(r + 1).padStart(2);
-    const side = r === 18 ? ' ← 上辺' : r === 0 ? ' ← 下辺' : '';
+    const side = r === N - 1 ? ' ← 上辺' : r === 0 ? ' ← 下辺' : '';
     text += rowLabel + ' [' + grid[r].join('') + ']' + side + '\n';
   }
 
@@ -2242,7 +2315,7 @@ function boardToText() {
   const blackStones = [];
   const whiteStones = [];
   moves.forEach(({col, row, color}) => {
-    const coord = COLS19[col] + (row + 1);
+    const coord = COLS[col] + (row + 1);
     if (color === 'black') blackStones.push(coord);
     else whiteStones.push(coord);
   });
@@ -2258,33 +2331,33 @@ function boardToText() {
 
   const nextColor = studyMove % 2 === 0 ? '黒' : '白';
   return `棋譜：${currentKifu.title}（${currentKifu.black} vs ${currentKifu.white}）
+盤面サイズ：${N}路盤
 直近の手順：${recent}
 次の手番：${nextColor}番
 
 【座標系の説明】
-・列：左からA B C D E F G H J K L M N O P Q R S T（Iは使用しない）
-・行：行19=上辺（盤面図の一番上の行）、行1=下辺（盤面図の一番下の行）
-・盤面図では行19が最初の行（上）、行1が最後の行（下）に表示されています
-・例：左上隅=A19（上辺左）、右上隅=T19（上辺右）、左下隅=A1（下辺左）、右下隅=T1（下辺右）
+・列：左から ${COLS.slice(0, N).split('').join(' ')}（Iは使用しない）
+・行：行${N}=上辺（盤面図の一番上の行）、行1=下辺（盤面図の一番下の行）
+・盤面図では行${N}が最初の行（上）、行1が最後の行（下）に表示されています
+・例：左上隅=A${N}（上辺左）、右上隅=${lastCol}${N}（上辺右）、左下隅=A1（下辺左）、右下隅=${lastCol}1（下辺右）
 
 【現在の石の配置】
 黒石（${blackStones.length}個）：${blackStones.join(' ')}
 白石（${whiteStones.length}個）：${whiteStones.join(' ')}
 
-【盤面図（行19=上辺 → 行1=下辺）】
+【盤面図（行${N}=上辺 → 行1=下辺）】
 ${text}
-⚠️ 重要：候補手は必ず上記の黒石・白石が置かれていない空点を選んでください。`;
+⚠️ 重要：候補手は必ず${N}路盤（列A〜${lastCol}、行1〜${N}）の範囲内で、上記の黒石・白石が置かれていない空点を選んでください。`;
 }
 
 // 座標文字列→インデックス変換
 function coordToIdx(coord) {
-  const COLS19 = 'ABCDEFGHJKLMNOPQRST';
   if (!coord || coord.length < 2) return null;
   const colChar = coord[0].toUpperCase();
   const rowNum = parseInt(coord.slice(1));
-  const col_idx = COLS19.indexOf(colChar);
+  const col_idx = COLS.indexOf(colChar);
   const row_idx = rowNum - 1;  // 行1=下端=index0
-  if (col_idx < 0 || isNaN(row_idx) || row_idx < 0 || row_idx > 18) return null;
+  if (col_idx < 0 || col_idx >= BOARD_SIZE || isNaN(row_idx) || row_idx < 0 || row_idx >= BOARD_SIZE) return null;
   return { col_idx, row_idx };
 }
 
@@ -2297,15 +2370,17 @@ async function runAIAnalysis() {
 
   const boardText = boardToText();
   const nextColor = studyMove % 2 === 0 ? '黒' : '白';
+  const N = BOARD_SIZE;
+  const lastCol = COLS[N - 1];
 
-  const prompt = `あなたはプロレベルの囲碁解説者です。以下の盤面を見て、次の${nextColor}番の有力手を3つ提案してください。
+  const prompt = `あなたはプロレベルの囲碁解説者です。以下の${N}路盤の局面を見て、次の${nextColor}番の有力手を3つ提案してください。
 
 ${boardText}
 
 【厳守事項】
 1. 候補手は必ず「空点」に着手すること（黒石・白石が既にある場所は絶対に選ばない）
-2. 座標は列（A〜T、Iなし）＋行（1〜19）の形式で記載（例：R16、Q3、D4）
-3. 上辺・下辺の表現は盤面図の向きに合わせること（行19=上辺、行1=下辺）
+2. 座標は列（A〜${lastCol}、Iなし）＋行（1〜${N}）の形式で記載し、必ず${N}路盤の範囲内にすること
+3. 上辺・下辺の表現は盤面図の向きに合わせること（行${N}=上辺、行1=下辺）
 4. 解説文中の方向表現（上辺・下辺・左辺・右辺）を正確に使うこと
 
 以下のJSON形式のみで回答してください（他のテキストは一切不要）：
@@ -2313,7 +2388,7 @@ ${boardText}
   "situation": "現在の局面の概況（2〜3文、${nextColor}番の視点で）",
   "candidates": [
     {
-      "coord": "空点の座標（例：R16）",
+      "coord": "空点の座標（例：${lastCol}${N >= 16 ? 16 : N-1}）",
       "label": "手の名前・方針（10文字以内）",
       "rating": "★★★ / ★★☆ / ★☆☆",
       "explanation": "この手の棋理と狙い（50〜80文字）"
